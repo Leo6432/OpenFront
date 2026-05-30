@@ -11,6 +11,7 @@ import { MapPlaylist } from "./MapPlaylist";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { renderAppShell } from "./RenderHtml";
+import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 
@@ -138,7 +139,43 @@ export async function startMaster() {
   const PORT = 3000;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
+    // Warm nginx cache for all map files after a short delay so nginx is ready
+    setTimeout(() => warmMapCache(), 3000);
   });
+}
+
+async function warmMapCache(): Promise<void> {
+  try {
+    const manifest = await getRuntimeAssetManifest();
+    const mapUrls = Object.entries(manifest)
+      .filter(([key]) => key.startsWith("maps/") && key.endsWith(".bin"))
+      .map(([, url]) => url);
+
+    if (mapUrls.length === 0) {
+      log.info("No map files in asset manifest to warm");
+      return;
+    }
+
+    log.info(`Warming nginx cache for ${mapUrls.length} map files...`);
+
+    let done = 0;
+    await Promise.allSettled(
+      mapUrls.map(async (url) => {
+        try {
+          await fetch(`http://localhost${url}`, {
+            signal: AbortSignal.timeout(60_000),
+          });
+          done++;
+        } catch {
+          // non-fatal
+        }
+      }),
+    );
+
+    log.info(`Map cache warmup complete: ${done}/${mapUrls.length} files cached`);
+  } catch (err) {
+    log.warn(`Map cache warmup error: ${err}`);
+  }
 }
 
 app.get("/api/health", (_req, res) => {

@@ -95,7 +95,14 @@ export class WorkerClient {
       setTimeout(() => {
         if (!this.isInitialized) {
           this.messageHandlers.delete(messageId);
-          reject(new Error("Worker initialization timeout"));
+          reject(
+            new Error(
+              "Map data took too long to load (>5 min).\n\n" +
+                "This usually happens on the first game after a server restart — " +
+                "the server needs to cache the map files.\n\n" +
+                "✅ Please refresh the page and try again, it should be much faster now.",
+            ),
+          );
         }
       }, 300000);
     });
