@@ -16,7 +16,7 @@ const USERNAME_KEY = "username";
 export const LOCAL_ACCOUNTS = [
   { id: "a1b2c3d4-e5f6-4789-abcd-ef0123456701", name: "Léo" },
   { id: "b2c3d4e5-f6a1-4890-bcde-f01234567802", name: "Paul" },
-  { id: "c3d4e5f6-a1b2-4901-cdef-012345678903", name: "Guillaume" },
+  { id: "c3d4e5f6-a1b2-4901-8def-012345678903", name: "Guillaume" },
 ] as const;
 
 export function selectLocalAccount(accountId: string): void {
