@@ -1388,7 +1388,9 @@
   "energy_display": {
     "energy": "Energy",
     "sell": "Sell",
-    "plants": "plants",
-    "no_data": "No data yet"
+    "no_data": "No data yet",
+    "market_title": "Energy Market",
+    "price_index": "Price Index",
+    "sell_label": "Total sale value"
   }
 }

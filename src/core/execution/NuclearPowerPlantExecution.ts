@@ -1,6 +1,6 @@
 import { Execution, Game, Unit } from "../game/Game";
 
-const ENERGY_PER_TICK = 10n;
+const ENERGY_PER_TICK = 1n;
 
 export class NuclearPowerPlantExecution implements Execution {
   private active = true;

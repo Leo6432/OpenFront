@@ -1,6 +1,6 @@
 import { Execution, Game, Player } from "../game/Game";
 
-const GOLD_PER_ENERGY = 10_000n;
+const GOLD_PER_ENERGY = 100n;
 
 export class SellEnergyExecution implements Execution {
   private active = true;
