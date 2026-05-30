@@ -1384,5 +1384,9 @@
   "fullscreen": {
     "enter": "Enter fullscreen",
     "exit": "Exit fullscreen"
+  },
+  "energy_display": {
+    "energy": "Energy",
+    "sell": "Sell"
   }
 }

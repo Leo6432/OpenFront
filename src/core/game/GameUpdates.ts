@@ -196,6 +196,7 @@ export interface PlayerUpdate {
   isDisconnected?: boolean;
   tilesOwned?: number;
   gold?: Gold;
+  energy?: Gold;
   troops?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;

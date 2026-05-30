@@ -743,6 +743,9 @@ export interface Player {
   gold(): Gold;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
+  energy(): bigint;
+  addEnergy(amount: bigint): void;
+  removeEnergy(amount: bigint): bigint;
   troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;

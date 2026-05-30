@@ -51,7 +51,8 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | StartGameIntent;
+  | StartGameIntent
+  | SellEnergyIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -86,6 +87,7 @@ export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
 export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
+export type SellEnergyIntent = z.infer<typeof SellEnergyIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -463,6 +465,10 @@ export const StartGameIntentSchema = z.object({
   type: z.literal("start_game"),
 });
 
+export const SellEnergyIntentSchema = z.object({
+  type: z.literal("sell_energy"),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -489,6 +495,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   StartGameIntentSchema,
+  SellEnergyIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

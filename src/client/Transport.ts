@@ -176,6 +176,8 @@ export class SendUpdateGameConfigIntentEvent implements GameEvent {
 
 export class SendStartGameEvent implements GameEvent {}
 
+export class SellEnergyIntentEvent implements GameEvent {}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -267,6 +269,7 @@ export class Transport {
     );
 
     this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
+    this.eventBus.on(SellEnergyIntentEvent, () => this.onSellEnergyIntent());
   }
 
   private startPing() {
@@ -649,6 +652,10 @@ export class Transport {
 
   private onSendStartGame() {
     this.sendIntent({ type: "start_game" });
+  }
+
+  private onSellEnergyIntent() {
+    this.sendIntent({ type: "sell_energy" });
   }
 
   private sendIntent(intent: Intent) {

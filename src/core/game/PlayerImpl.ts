@@ -103,6 +103,7 @@ export class PlayerImpl implements Player {
 
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
+  private _energy: bigint = 0n;
 
   /**
    * Last PlayerUpdate emitted for this player on the worker→main channel.
@@ -160,6 +161,7 @@ export class PlayerImpl implements Player {
       isDisconnected: this.isDisconnected(),
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
+      energy: this._energy,
       troops: this.troops(),
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
@@ -957,6 +959,20 @@ export class PlayerImpl implements Player {
       return false;
     }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);
+  }
+
+  energy(): bigint {
+    return this._energy;
+  }
+
+  addEnergy(amount: bigint): void {
+    this._energy += amount;
+  }
+
+  removeEnergy(amount: bigint): bigint {
+    const actual = amount > this._energy ? this._energy : amount;
+    this._energy -= actual;
+    return actual;
   }
 
   gold(): Gold {

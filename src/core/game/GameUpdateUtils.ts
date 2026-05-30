@@ -36,6 +36,7 @@ export function diffPlayerUpdate(
   setIfDifferent("isDisconnected", prev.isDisconnected === next.isDisconnected);
   setIfDifferent("tilesOwned", prev.tilesOwned === next.tilesOwned);
   setIfDifferent("gold", prev.gold === next.gold);
+  setIfDifferent("energy", prev.energy === next.energy);
   setIfDifferent("troops", prev.troops === next.troops);
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
   setIfDifferent(
@@ -91,6 +92,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
     target.isDisconnected = pu.isDisconnected;
   if (pu.tilesOwned !== undefined) target.tilesOwned = pu.tilesOwned;
   if (pu.gold !== undefined) target.gold = Number(pu.gold);
+  if (pu.energy !== undefined) target.energy = Number(pu.energy);
   if (pu.troops !== undefined) target.troops = pu.troops;
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {

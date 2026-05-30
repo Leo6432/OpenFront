@@ -50,6 +50,7 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_NUCLEAR_POWER_PLANT,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
@@ -134,12 +135,6 @@ export class StructurePass {
         this.typeToAtlasCol.set(header.unitTypes[i], col);
       }
     }
-    // Nuclear power plant reuses the factory icon (same atlas column)
-    this.typeToAtlasCol.set(
-      UT_NUCLEAR_POWER_PLANT,
-      STRUCTURE_ORDER.indexOf(UT_FACTORY),
-    );
-
     // Compile shaders
     this.program = createProgram(
       gl,
@@ -262,10 +257,57 @@ export class StructurePass {
     img.crossOrigin = "anonymous";
     img.src = iconAtlasUrl;
     await img.decode();
+
+    // Extend the existing 6-column atlas with a 7th column for Nuclear Power Plant.
+    // The radiation trefoil is drawn with Canvas2D.
+    const origCols = 6;
+    const colW = img.width / origCols;
+    const h = img.height;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = colW * ATLAS_COLS;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+
+    // Draw original 6 columns
+    ctx.drawImage(img, 0, 0);
+
+    // Draw radiation trefoil (international symbol) for NPP in the 7th column
+    const cx = colW * origCols + colW / 2;
+    const cy = h / 2;
+    const r = Math.min(colW, h) * 0.38;
+
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.translate(cx, cy);
+
+    // Three blades, each 60° wide, 120° apart
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2) / 3);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const innerR = r * 0.3;
+      const outerR = r * 0.95;
+      const halfAngle = Math.PI / 6; // 30°
+      ctx.arc(0, 0, outerR, -Math.PI / 2 - halfAngle, -Math.PI / 2 + halfAngle);
+      ctx.arc(0, 0, innerR, -Math.PI / 2 + halfAngle, -Math.PI / 2 - halfAngle, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Center hub
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,

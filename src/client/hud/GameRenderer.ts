@@ -39,6 +39,7 @@ import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { TeamStats } from "./layers/TeamStats";
 import { UnitDisplay } from "./layers/UnitDisplay";
+import { EnergyDisplay } from "./layers/EnergyDisplay";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -208,6 +209,14 @@ export function createRenderer(
   unitDisplay.eventBus = eventBus;
   unitDisplay.uiState = uiState;
 
+  const energyDisplay = document.querySelector(
+    "energy-display",
+  ) as EnergyDisplay;
+  if (energyDisplay instanceof EnergyDisplay) {
+    energyDisplay.game = game;
+    energyDisplay.eventBus = eventBus;
+  }
+
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
     console.error("player panel not found");
@@ -313,6 +322,7 @@ export function createRenderer(
     leaderboard,
     gameLeftSidebar,
     unitDisplay,
+    ...(energyDisplay instanceof EnergyDisplay ? [energyDisplay] : []),
     gameRightSidebar,
     controlPanel,
     playerInfo,

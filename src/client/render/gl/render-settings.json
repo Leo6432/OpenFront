@@ -113,6 +113,10 @@
       "Missile Silo": {
         "scale": 1.55,
         "iconFill": 0.85
+      },
+      "Nuclear Power Plant": {
+        "scale": 1.2,
+        "iconFill": 0.9
       }
     },
     "highlightOutlineWidth": 0.04,
@@ -296,6 +300,10 @@
     "Missile Silo": {
       "radius": 10,
       "intensity": 0.9
+    },
+    "Nuclear Power Plant": {
+      "radius": 16,
+      "intensity": 1.1
     },
     "Transport": {
       "radius": 6,
