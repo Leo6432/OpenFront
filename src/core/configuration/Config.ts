@@ -406,6 +406,17 @@ export class Config {
           upgradable: true,
         };
         break;
+      case UnitType.NuclearPowerPlant:
+        info = {
+          // Expensive: 5M base, +5M per plant already owned.
+          cost: this.costWrapper(
+            (numUnits: number) => (numUnits + 1) * 5_000_000,
+            UnitType.NuclearPowerPlant,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          upgradable: true,
+        };
+        break;
       case UnitType.Train:
         info = {
           cost: () => 0n,

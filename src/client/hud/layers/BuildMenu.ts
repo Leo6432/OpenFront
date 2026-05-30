@@ -118,6 +118,13 @@ export const buildTable: BuildItemDisplay[][] = [
       key: "unit_type.factory",
       countable: true,
     },
+    {
+      unitType: UnitType.NuclearPowerPlant,
+      icon: factoryIcon,
+      description: "build_menu.desc.nuclear_power_plant",
+      key: "unit_type.nuclear_power_plant",
+      countable: true,
+    },
   ],
 ];
 
