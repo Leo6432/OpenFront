@@ -37,6 +37,12 @@ export class LocalAccountModal extends LitElement {
   };
 
   open() {
+    // Move to <body> so `position: fixed` is relative to the viewport.
+    // Inside the nav bar, an ancestor's backdrop-blur creates a containing
+    // block that would pin the overlay to the top bar instead of centering it.
+    if (this.parentElement !== document.body) {
+      document.body.appendChild(this);
+    }
     this.isOpen = true;
   }
 
