@@ -97,7 +97,7 @@ export class WorkerClient {
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 60000);
+      }, 300000);
     });
   }
 
