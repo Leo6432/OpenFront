@@ -9,6 +9,29 @@ import { generateCryptoRandomUUID } from "./Utils";
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
+const LOCAL_ACCOUNT_KEY = "local_account_id";
+const USERNAME_KEY = "username";
+
+// Fixed local accounts — UUIDs are stable so stats persist across sessions
+export const LOCAL_ACCOUNTS = [
+  { id: "a1b2c3d4-e5f6-4789-abcd-ef0123456701", name: "Léo" },
+  { id: "b2c3d4e5-f6a1-4890-bcde-f01234567802", name: "Paul" },
+  { id: "c3d4e5f6-a1b2-4901-cdef-012345678903", name: "Guillaume" },
+] as const;
+
+export function selectLocalAccount(accountId: string): void {
+  const account = LOCAL_ACCOUNTS.find((a) => a.id === accountId);
+  if (!account) return;
+  localStorage.setItem(PERSISTENT_ID_KEY, account.id);
+  localStorage.setItem(LOCAL_ACCOUNT_KEY, account.id);
+  localStorage.setItem(USERNAME_KEY, account.name);
+  window.dispatchEvent(new CustomEvent("localAccountChanged", { detail: account }));
+}
+
+export function getSelectedLocalAccount(): (typeof LOCAL_ACCOUNTS)[number] | null {
+  const id = localStorage.getItem(LOCAL_ACCOUNT_KEY);
+  return LOCAL_ACCOUNTS.find((a) => a.id === id) ?? null;
+}
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
