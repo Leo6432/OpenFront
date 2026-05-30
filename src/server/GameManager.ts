@@ -79,7 +79,7 @@ export class GameManager {
         instantBuild: false,
         randomSpawn: false,
         gameMode: GameMode.FFA,
-        bots: 400,
+        bots: 50,
         disabledUnits: [],
         ...gameConfig,
       },
