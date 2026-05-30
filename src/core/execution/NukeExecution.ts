@@ -365,6 +365,7 @@ export class NukeExecution implements Execution {
     const outer2 = magnitude.outer * magnitude.outer;
     const dst = this.dst;
     const destroyer = this.player;
+    const meltdownTiles: import("../game/GameMap").TileRef[] = [];
     for (const unit of mg.units()) {
       const type = unit.type();
       if (
@@ -377,8 +378,18 @@ export class NukeExecution implements Execution {
         continue;
       }
       if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
+        if (type === UnitType.NuclearPowerPlant) {
+          meltdownTiles.push(unit.tile());
+        }
         unit.delete(true, destroyer);
       }
+    }
+
+    // Chain reaction: each destroyed nuclear power plant triggers an H-bomb sized secondary explosion
+    for (const tile of meltdownTiles) {
+      mg.addExecution(
+        new NukeExecution(UnitType.HydrogenBomb, this.player, tile, null, -1, 5),
+      );
     }
 
     this.redrawBuildings(magnitude.outer + SPRITE_RADIUS);

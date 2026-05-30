@@ -20,6 +20,7 @@ import {
   UT_DEFENSE_POST,
   UT_FACTORY,
   UT_MISSILE_SILO,
+  UT_NUCLEAR_POWER_PLANT,
   UT_PORT,
   UT_SAM_LAUNCHER,
 } from "../../types";
@@ -133,6 +134,11 @@ export class StructurePass {
         this.typeToAtlasCol.set(header.unitTypes[i], col);
       }
     }
+    // Nuclear power plant reuses the factory icon (same atlas column)
+    this.typeToAtlasCol.set(
+      UT_NUCLEAR_POWER_PLANT,
+      STRUCTURE_ORDER.indexOf(UT_FACTORY),
+    );
 
     // Compile shaders
     this.program = createProgram(

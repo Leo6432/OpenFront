@@ -60,6 +60,10 @@ function getStructureRatios(
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
     },
+    [UnitType.NuclearPowerPlant]: {
+      ratioPerCity: 0.1,
+      perceivedCostIncreasePerOwned: 2,
+    },
   };
 }
 
@@ -470,6 +474,7 @@ export class NationStructureBehavior {
       UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
+      UnitType.NuclearPowerPlant,
     ];
 
     const nukesEnabled =
@@ -875,6 +880,7 @@ export class NationStructureBehavior {
       case UnitType.MissileSilo:
         return this.missileSiloValue();
       case UnitType.Factory:
+      case UnitType.NuclearPowerPlant:
         return this.factoryValue();
       case UnitType.Port:
         return this.portValue();
