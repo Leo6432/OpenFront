@@ -89,7 +89,9 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
-        cdnBase: getCdnBase(),
+        // Blob workers have no origin, so relative URLs fail.
+        // Always pass an absolute base: CDN if configured, else the page origin.
+        cdnBase: getCdnBase() || window.location.origin,
       });
 
       setTimeout(() => {
