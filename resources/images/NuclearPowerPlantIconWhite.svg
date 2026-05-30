@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="#ffffff">
+  <!-- Universal radiation trefoil: three 60° blades, 60° gaps, centered (256,256) -->
+  <!-- Blade pointing down -->
+  <path d="M291 316.6 L361 437.9 A210 210 0 0 1 151 437.9 L221 316.6 A70 70 0 0 0 291 316.6 Z"/>
+  <!-- Blade pointing upper-left -->
+  <path d="M186 256 L46 256 A210 210 0 0 1 151 74.1 L221 195.4 A70 70 0 0 0 186 256 Z"/>
+  <!-- Blade pointing upper-right -->
+  <path d="M291 195.4 L361 74.1 A210 210 0 0 1 466 256 L326 256 A70 70 0 0 0 291 195.4 Z"/>
+  <!-- Center hub -->
+  <circle cx="256" cy="256" r="40"/>
+</svg>

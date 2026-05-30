@@ -18,6 +18,9 @@ import { renderNumber, translateText } from "../../Utils";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const nuclearPowerPlantIcon = assetUrl(
+  "images/NuclearPowerPlantIconWhite.svg",
+);
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const mirvIcon = assetUrl("images/MIRVIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
@@ -37,6 +40,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
+  private _nuclearPowerPlants = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -100,6 +104,9 @@ export class UnitDisplay extends LitElement implements Controller {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._nuclearPowerPlants = player.totalUnitLevels(
+      UnitType.NuclearPowerPlant,
+    );
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
   }
@@ -136,6 +143,13 @@ export class UnitDisplay extends LitElement implements Controller {
             UnitType.Factory,
             "factory",
             this.keybinds["buildFactory"]?.key ?? "2",
+          )}
+          ${this.renderUnitItem(
+            nuclearPowerPlantIcon,
+            this._nuclearPowerPlants,
+            UnitType.NuclearPowerPlant,
+            "nuclear_power_plant",
+            this.keybinds["buildNuclearPowerPlant"]?.key ?? "",
           )}
           ${this.renderUnitItem(
             portIcon,

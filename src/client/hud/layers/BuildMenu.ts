@@ -29,6 +29,9 @@ import { renderNumber } from "../../Utils";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+const nuclearPowerPlantIcon = assetUrl(
+  "images/NuclearPowerPlantIconWhite.svg",
+);
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 const mirvIcon = assetUrl("images/MIRVIcon.svg");
 const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
@@ -120,7 +123,7 @@ export const buildTable: BuildItemDisplay[][] = [
     },
     {
       unitType: UnitType.NuclearPowerPlant,
-      icon: factoryIcon,
+      icon: nuclearPowerPlantIcon,
       description: "build_menu.desc.nuclear_power_plant",
       key: "unit_type.nuclear_power_plant",
       countable: true,
