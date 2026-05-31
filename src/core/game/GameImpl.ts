@@ -77,26 +77,29 @@ export type CellString = string;
 // ─── Energy market ────────────────────────────────────────────────────────────
 // All arithmetic uses bigint so the simulation stays deterministic.
 //
-// Demand is 0.5/tick per city or factory. Since bigint has no fractions, we
-// use a half-unit accumulator: each structure contributes 1 "half-unit" per
-// tick; the accumulator is drained by 2 half-units per real energy unit.
-// This gives exactly 0.5 energy/tick per structure over time.
+// Demand is 0.1/tick per city or factory. Implemented with a 10-unit
+// accumulator: each structure contributes 1 "tenth-unit" per tick; 10
+// tenth-units = 1 real energy unit drained from the global stock.
+// This gives exactly 0.1 energy/tick (= 60/min) per structure.
 //
-// Price = 1 (minimum) when no cities/factories exist, or when the market stock
-// is fully supplied. Price rises toward MAX (500) as the stock is depleted by
-// demand. A big sell-off fills the stock and keeps prices low for many ticks.
+// The price never jumps instantly: it can rise at most MAX_PRICE_RISE per tick
+// and fall at most MAX_PRICE_FALL per tick. This means even if the stock hits
+// zero the price creeps up gradually instead of snapping to the maximum.
 
-// Demand rate: each structure contributes 1 half-unit/tick = 0.5 energy/tick.
-// Both cities and factories count the same.
-const DEMAND_HALF_UNITS_PER_STRUCTURE = 1n;
+// Demand: 1 tenth-unit/tick per structure → accumulator divisor 10.
+const DEMAND_TENTH_UNITS_PER_STRUCTURE = 1n;
+const DEMAND_DIVISOR = 10n; // 10 tenth-units = 1 real energy unit
 
 // Price bounds (gold per unit of energy).
 const ENERGY_MIN_PRICE = 1n;
 const ENERGY_MAX_PRICE = 500n;
 
-// Equilibrium stock = total_demand_per_tick × EQUILIBRIUM_TICKS.
-// At the equilibrium level the price sits halfway between MIN and MAX.
-// 300 ticks = 30 s at 10 ticks/s.
+// Maximum price movement per tick. The asymmetry makes the price rise slowly
+// (players have time to react) but fall reasonably fast when they sell.
+const MAX_PRICE_RISE_PER_TICK = 1n;  // +1/tick max  (~100 s to go 1 → MAX)
+const MAX_PRICE_FALL_PER_TICK = 5n;  // -5/tick max  (~ 20 s to go MAX → 1)
+
+// Equilibrium stock (≈ 30 s of demand at the current rate).
 const EQUILIBRIUM_TICKS = 300n;
 
 export class GameImpl implements Game {
@@ -531,9 +534,7 @@ export class GameImpl implements Game {
     this._energySoldLastTick = this._energySoldThisTick;
     this._energySoldThisTick = 0n;
 
-    // 1. Count structures that create energy demand (cities + factories).
-    //    Both types contribute equally at 0.5 energy/tick, tracked as
-    //    half-units so bigint arithmetic stays exact.
+    // 1. Count structures (cities + factories) that create demand.
     let structureCount = 0n;
     for (const player of this._players.values()) {
       if (!player.isAlive()) continue;
@@ -542,44 +543,58 @@ export class GameImpl implements Game {
     }
     this._energyStructureCount = structureCount;
 
-    // 2. Drain the stock at 0.5 energy/tick per structure using the half-unit
-    //    accumulator. This ensures continuous, even consumption every tick.
-    this._demandAccumulator += structureCount * DEMAND_HALF_UNITS_PER_STRUCTURE;
-    const drain = this._demandAccumulator / 2n;
-    this._demandAccumulator = this._demandAccumulator % 2n;
+    // 2. Drain stock at 0.1 energy/tick per structure via the tenth-unit
+    //    accumulator. 10 tenth-units = 1 real energy drained from the stock.
+    this._demandAccumulator += structureCount * DEMAND_TENTH_UNITS_PER_STRUCTURE;
+    const drain = this._demandAccumulator / DEMAND_DIVISOR;
+    this._demandAccumulator = this._demandAccumulator % DEMAND_DIVISOR;
     if (this._energyStock <= drain) {
       this._energyStock = 0n;
     } else {
       this._energyStock -= drain;
     }
-    // Track real units drained this tick for the display.
     this._energyConsumptionPerTick = drain;
 
-    // 3. No structures → market is idle, price stays at minimum.
+    // 3. No structures → market is idle, price drifts back to minimum.
     if (structureCount === 0n) {
-      this._energyPrice = ENERGY_MIN_PRICE;
+      const fall = this._energyPrice - ENERGY_MIN_PRICE;
+      this._energyPrice -= fall < MAX_PRICE_FALL_PER_TICK ? fall : MAX_PRICE_FALL_PER_TICK;
       return;
     }
 
-    // 4. Derive price from stock vs equilibrium (linear: MIN when full, MAX
-    //    when empty). Equilibrium = 0.5 × structureCount × EQUILIBRIUM_TICKS.
-    //    In half-units: equilibrium_half = structureCount × EQUILIBRIUM_TICKS.
-    const equilibriumHalf = structureCount * EQUILIBRIUM_TICKS;
-    // Stock in half-units for the comparison.
-    const stockHalf = this._energyStock * 2n;
+    // 4. Compute the "target" price from stock vs equilibrium (linear).
+    //    Equilibrium = 0.1 × structureCount × EQUILIBRIUM_TICKS, expressed in
+    //    tenth-units to stay in integer arithmetic.
+    //    equilibrium_tenths = structureCount × EQUILIBRIUM_TICKS
+    //    stock_tenths       = energyStock × DEMAND_DIVISOR
+    const equilibriumTenths = structureCount * EQUILIBRIUM_TICKS;
+    const stockTenths = this._energyStock * DEMAND_DIVISOR;
 
-    let price: bigint;
-    if (stockHalf === 0n) {
-      price = ENERGY_MAX_PRICE;
-    } else if (stockHalf >= equilibriumHalf) {
-      price = ENERGY_MIN_PRICE;
+    let target: bigint;
+    if (stockTenths === 0n) {
+      target = ENERGY_MAX_PRICE;
+    } else if (stockTenths >= equilibriumTenths) {
+      target = ENERGY_MIN_PRICE;
     } else {
-      // Linear: 0 → MAX, equilibriumHalf → MIN
-      price =
+      // Linear: 0 → MAX, equilibrium → MIN
+      target =
         ENERGY_MAX_PRICE -
-        ((ENERGY_MAX_PRICE - ENERGY_MIN_PRICE) * stockHalf) / equilibriumHalf;
+        ((ENERGY_MAX_PRICE - ENERGY_MIN_PRICE) * stockTenths) /
+          equilibriumTenths;
     }
-    this._energyPrice = price;
+
+    // 5. Move the current price toward the target by at most the per-tick cap.
+    //    Rising is slow (players have time to react by selling).
+    //    Falling is faster (reward for selling is visible quickly).
+    if (target > this._energyPrice) {
+      const rise = target - this._energyPrice;
+      this._energyPrice +=
+        rise < MAX_PRICE_RISE_PER_TICK ? rise : MAX_PRICE_RISE_PER_TICK;
+    } else if (target < this._energyPrice) {
+      const fall = this._energyPrice - target;
+      this._energyPrice -=
+        fall < MAX_PRICE_FALL_PER_TICK ? fall : MAX_PRICE_FALL_PER_TICK;
+    }
   }
 
   energyMarketPrice(): bigint {

@@ -149,10 +149,10 @@ export class EnergyDisplay extends LitElement implements Controller {
 
   /** Bar showing global stock vs 1 minute of demand. */
   private renderStockBar() {
-    // 0.5 energy/tick per structure × 600 ticks/min = 300/min per structure.
-    const demandPerMin = this._structureCount * 300;
-    // Equilibrium stock ≈ 30 s of demand (300 ticks × 0.5/tick per structure).
-    const equilibrium = this._structureCount * 150;
+    // 0.1 energy/tick per structure × 600 ticks/min = 60/min per structure.
+    const demandPerMin = this._structureCount * 60;
+    // Equilibrium stock ≈ 30 s of demand (300 ticks × 0.1/tick per structure).
+    const equilibrium = this._structureCount * 30;
     const max = Math.max(demandPerMin, equilibrium, this._stock, 1);
     const stockPct = Math.min(100, (this._stock / max) * 100);
     const eqPct = equilibrium > 0 ? Math.min(100, (equilibrium / max) * 100) : 50;

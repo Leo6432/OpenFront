@@ -27,14 +27,15 @@ describe("Energy market", () => {
     player.buildUnit(UnitType.Factory, game.ref(4, 4), {});
 
     const priceBefore = game.energyMarketPrice();
-    // No one sells energy, so demand drains the stock → price rises toward MAX.
-    // With 2 structures × 0.5/tick = 1/tick drain; need >1 tick for drain to start.
-    for (let i = 0; i < 5; i++) {
+    // No one sells energy. Demand drains the stock; price rises at most
+    // MAX_PRICE_RISE_PER_TICK (1) per tick, so after N ticks price = 1 + N.
+    for (let i = 0; i < 20; i++) {
       game.executeNextTick();
     }
-    // structureCount is exposed through energyStructureCount()
     expect(game.energyStructureCount()).toBe(2n);
+    // Price should have risen, but not instantly (smooth cap of 1/tick).
     expect(game.energyMarketPrice()).toBeGreaterThan(priceBefore);
+    expect(game.energyMarketPrice()).toBeLessThanOrEqual(priceBefore + 20n);
   });
 
   test("selling energy pays gold at the market price and lowers the price", async () => {
