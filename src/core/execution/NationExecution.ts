@@ -21,6 +21,7 @@ import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
 import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
+import { SellEnergyExecution } from "./SellEnergyExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
@@ -191,6 +192,7 @@ export class NationExecution implements Execution {
       return;
     }
 
+    this.maybeSellEnergy();
     this.emojiBehavior.maybeSendCasualEmoji();
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
@@ -253,6 +255,13 @@ export class NationExecution implements Execution {
       this.player,
     );
     this.behaviorsInitialized = true;
+  }
+
+  private maybeSellEnergy(): void {
+    if (this.player === null || !this.player.isAlive()) return;
+    if (this.player.energy() > 0n) {
+      this.mg.addExecution(new SellEnergyExecution(this.player));
+    }
   }
 
   private randomSpawnLand(): TileRef | null {
