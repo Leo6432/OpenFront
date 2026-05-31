@@ -22,6 +22,7 @@ import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const battleshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
@@ -599,18 +600,18 @@ export const boatMenuElement: MenuElement = {
 
 export const aircraftCarrierMenuElement: MenuElement = {
   id: "carrier",
-  name: translateText("unit_type.aircraft_carrier"),
+  name: "Porte-avions",
   disabled: (params: MenuElementParams) =>
     !params.playerActions.interaction?.canSendAircraftCarrier,
-  icon: boatIcon,
+  icon: battleshipIcon,
   color: COLORS.boat,
-  tooltipItems: [
+  tooltipKeys: [
     {
-      text: translateText("unit_type.aircraft_carrier"),
-      className: "",
+      key: "unit_type.aircraft_carrier",
+      className: "title",
     },
     {
-      text: "10 000 000 💰",
+      key: "radial_menu.aircraft_carrier_cost",
       className: "cost",
     },
   ],

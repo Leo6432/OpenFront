@@ -1283,7 +1283,8 @@
   },
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
-    "delete_unit_description": "Click to delete the nearest unit"
+    "delete_unit_description": "Click to delete the nearest unit",
+    "aircraft_carrier_cost": "10 000 000 💰"
   },
   "discord_user_header": {
     "avatar_alt": "Avatar"

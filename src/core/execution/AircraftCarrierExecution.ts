@@ -6,11 +6,10 @@ import { PathStatus } from "../pathfinding/types";
 import { ShellExecution } from "./ShellExecution";
 
 const CARRIER_COST = 10_000_000n;
-// 20 seconds of bombardment (10 ticks/s × 20 s)
+// 20 seconds of bombardment at 10 ticks/s
 const ATTACK_DURATION = 200;
-// Fire a shell every 4 ticks (~2.5/s per carrier)
+// Fire a shell every 4 ticks (~2.5/s)
 const FIRE_RATE = 4;
-// Carrier fires at units within this tile range
 const ATTACK_RANGE = 18;
 
 export class AircraftCarrierExecution implements Execution {
@@ -20,7 +19,8 @@ export class AircraftCarrierExecution implements Execution {
   private attackTicks = 0;
   private lastShot = -999;
   private homeTile!: TileRef;
-  private dstTile!: TileRef;
+  // Water tile adjacent to enemy coast — warshipSpawn requires a water tile
+  private dstWaterTile!: TileRef;
   private mg!: Game;
   private pathfinder!: WaterPathFinder;
   private targetPlayer!: Player;
@@ -48,26 +48,35 @@ export class AircraftCarrierExecution implements Execution {
       return;
     }
 
-    // Find an enemy coastal tile to navigate toward
+    // Find a WATER tile adjacent to the enemy's coast.
+    // targetTransportTile returns the enemy's land-shore tile; we need the
+    // adjacent water tile because warshipSpawn() requires isWater(tile).
     const borderTiles = Array.from(this.targetPlayer.borderTiles());
     if (borderTiles.length === 0) {
       this.active = false;
       return;
     }
 
-    let dst: TileRef | null = null;
+    let waterNearEnemy: TileRef | null = null;
     for (const bt of borderTiles) {
-      dst = targetTransportTile(mg, bt);
-      if (dst !== null) break;
+      const shore = targetTransportTile(mg, bt);
+      if (shore === null) continue;
+      // Walk the neighbors of the shore tile to find water
+      mg.forEachNeighbor(shore, (n) => {
+        if (waterNearEnemy === null && mg.isWater(n)) {
+          waterNearEnemy = n;
+        }
+      });
+      if (waterNearEnemy !== null) break;
     }
-    if (dst === null) {
+    if (waterNearEnemy === null) {
       this.active = false;
       return;
     }
-    this.dstTile = dst;
+    this.dstWaterTile = waterNearEnemy;
 
-    // Find a spawn tile for the carrier (water adjacent to sender, connected to target)
-    const spawnTile = this.sender.canBuild(UnitType.Warship, this.dstTile);
+    // Sender must have a port in the same water body — canBuild handles that
+    const spawnTile = this.sender.canBuild(UnitType.Warship, this.dstWaterTile);
     if (spawnTile === false) {
       this.active = false;
       return;
@@ -77,7 +86,7 @@ export class AircraftCarrierExecution implements Execution {
     this.sender.removeGold(CARRIER_COST);
 
     this.carrier = this.sender.buildUnit(UnitType.Warship, spawnTile, {
-      patrolTile: this.dstTile,
+      patrolTile: this.dstWaterTile,
     });
 
     this.pathfinder = new WaterPathFinder(mg);
@@ -91,18 +100,23 @@ export class AircraftCarrierExecution implements Execution {
 
     switch (this.phase) {
       case "navigate": {
-        const dist = this.mg.manhattanDist(this.carrier.tile(), this.dstTile);
+        const dist = this.mg.manhattanDist(
+          this.carrier.tile(),
+          this.dstWaterTile,
+        );
         if (dist <= 4) {
           this.phase = "attack";
           return;
         }
-        const result = this.pathfinder.next(this.carrier.tile(), this.dstTile);
+        const result = this.pathfinder.next(
+          this.carrier.tile(),
+          this.dstWaterTile,
+        );
         if (result.status === PathStatus.COMPLETE) {
           this.phase = "attack";
         } else if (result.status === PathStatus.NEXT) {
           this.carrier.move(result.node);
         } else {
-          // No path — carrier lost at sea
           this.carrier.delete();
           this.active = false;
         }
@@ -133,7 +147,10 @@ export class AircraftCarrierExecution implements Execution {
       }
 
       case "retreat": {
-        const dist = this.mg.manhattanDist(this.carrier.tile(), this.homeTile);
+        const dist = this.mg.manhattanDist(
+          this.carrier.tile(),
+          this.homeTile,
+        );
         if (dist <= 2) {
           this.carrier.delete();
           this.active = false;

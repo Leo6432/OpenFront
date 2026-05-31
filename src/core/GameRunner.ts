@@ -231,14 +231,13 @@ export class GameRunner {
 
     if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
-      const senderComps = this.game.sharedWaterComponents(player);
+      // Carrier needs sender to have a port AND target to have any coastline.
+      // Actual water-path connectivity is validated in AircraftCarrierExecution.
+      const senderHasPort = player
+        .units(UnitType.Port)
+        .some((u) => u.isActive() && !u.isUnderConstruction());
       const targetComps = this.game.sharedWaterComponents(other);
-      const sharesWater =
-        senderComps != null &&
-        targetComps != null &&
-        senderComps.size > 0 &&
-        targetComps.size > 0 &&
-        [...senderComps].some((c) => targetComps.has(c));
+      const targetHasCoast = targetComps != null && targetComps.size > 0;
 
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
@@ -250,7 +249,9 @@ export class GameRunner {
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
         canSendAircraftCarrier:
-          sharesWater && player.canAttackPlayer(other, false),
+          senderHasPort &&
+          targetHasCoast &&
+          player.canAttackPlayer(other, false),
         allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }
