@@ -1,6 +1,5 @@
 import { Execution, Game, Player, PlayerID, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { targetTransportTile } from "../game/TransportShipUtils";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { ShellExecution } from "./ShellExecution";
@@ -48,44 +47,38 @@ export class AircraftCarrierExecution implements Execution {
       return;
     }
 
-    // Find a WATER tile adjacent to the enemy's coast.
-    // targetTransportTile returns the enemy's land-shore tile; we need the
-    // adjacent water tile because warshipSpawn() requires isWater(tile).
+    // Find a water tile adjacent to the enemy's shore that is also reachable
+    // from the sender's port (same water component).  We iterate border tiles
+    // that are shore tiles and test each adjacent water tile with canBuild so
+    // we pick a water tile in the correct connected component.
     const borderTiles = Array.from(this.targetPlayer.borderTiles());
     if (borderTiles.length === 0) {
       this.active = false;
       return;
     }
 
-    let waterNearEnemy: TileRef | null = null;
+    let found = false;
     for (const bt of borderTiles) {
-      const shore = targetTransportTile(mg, bt);
-      if (shore === null) continue;
-      // Walk the neighbors of the shore tile to find water
-      mg.forEachNeighbor(shore, (n) => {
-        if (waterNearEnemy === null && mg.isWater(n)) {
-          waterNearEnemy = n;
+      if (!mg.isShore(bt)) continue;
+      mg.forEachNeighbor(bt, (n) => {
+        if (found || !mg.isWater(n)) return;
+        const spawn = this.sender.canBuild(UnitType.Warship, n);
+        if (spawn !== false) {
+          this.dstWaterTile = n;
+          this.homeTile = spawn;
+          found = true;
         }
       });
-      if (waterNearEnemy !== null) break;
+      if (found) break;
     }
-    if (waterNearEnemy === null) {
+    if (!found) {
       this.active = false;
       return;
     }
-    this.dstWaterTile = waterNearEnemy;
-
-    // Sender must have a port in the same water body — canBuild handles that
-    const spawnTile = this.sender.canBuild(UnitType.Warship, this.dstWaterTile);
-    if (spawnTile === false) {
-      this.active = false;
-      return;
-    }
-    this.homeTile = spawnTile;
 
     this.sender.removeGold(CARRIER_COST);
 
-    this.carrier = this.sender.buildUnit(UnitType.Warship, spawnTile, {
+    this.carrier = this.sender.buildUnit(UnitType.Warship, this.homeTile, {
       patrolTile: this.dstWaterTile,
     });
 
