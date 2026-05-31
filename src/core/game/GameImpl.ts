@@ -91,8 +91,9 @@ export type CellString = string;
 const TICKS_PER_MINUTE = 600n;
 
 // How much energy each structure type drains from the global stock per tick.
-const ENERGY_CONSUMPTION_PER_CITY = 10n;    // 6 000 / min
-const ENERGY_CONSUMPTION_PER_FACTORY = 20n; // 12 000 / min
+// Matches nuclear plant production (1/tick) so 1 plant balances 1 city.
+const ENERGY_CONSUMPTION_PER_CITY = 1n;    // 600 / min
+const ENERGY_CONSUMPTION_PER_FACTORY = 2n; // 1 200 / min
 
 // Nuclear plant production — each plant fills the owner's personal energy.
 // Value kept in NuclearPowerPlantExecution; referenced here for documentation.
