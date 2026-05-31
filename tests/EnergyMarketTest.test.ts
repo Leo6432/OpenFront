@@ -27,11 +27,13 @@ describe("Energy market", () => {
     player.buildUnit(UnitType.Factory, game.ref(4, 4), {});
 
     const priceBefore = game.energyMarketPrice();
-    // No one sells, but cities/factories create demand → price rises.
+    // No one sells energy, so demand drains the stock → price rises toward MAX.
+    // With 2 structures × 0.5/tick = 1/tick drain; need >1 tick for drain to start.
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
-    expect(game.energyConsumption()).toBeGreaterThan(0n);
+    // structureCount is exposed through energyStructureCount()
+    expect(game.energyStructureCount()).toBe(2n);
     expect(game.energyMarketPrice()).toBeGreaterThan(priceBefore);
   });
 
@@ -102,8 +104,8 @@ describe("Energy market", () => {
     game.executeNextTick();
     game.executeNextTick();
 
-    // Price is clamped at the floor (10), never zero or negative.
-    expect(game.energyMarketPrice()).toBeGreaterThanOrEqual(10n);
+    // Price is clamped at the floor (1), never zero or negative.
+    expect(game.energyMarketPrice()).toBeGreaterThanOrEqual(1n);
     expect(game.energyMarketPrice()).toBeLessThanOrEqual(500n);
   });
 });

@@ -24,8 +24,9 @@ export class EnergyDisplay extends LitElement implements Controller {
   @state() private _expanded = false;
 
   // Live values from the deterministic global energy market.
-  @state() private _price = 100;
+  @state() private _price = 1;
   @state() private _stock = 0;
+  @state() private _structureCount = 0;
   @state() private _consumptionPerTick = 0;
   @state() private _soldLastTick = 0;
 
@@ -58,6 +59,7 @@ export class EnergyDisplay extends LitElement implements Controller {
     if (market) {
       this._price = market.price;
       this._stock = market.stock;
+      this._structureCount = market.structureCount;
       this._consumptionPerTick = market.consumptionPerTick;
       this._soldLastTick = market.soldLastTick;
     }
@@ -147,12 +149,13 @@ export class EnergyDisplay extends LitElement implements Controller {
 
   /** Bar showing global stock vs 1 minute of demand. */
   private renderStockBar() {
-    const demandPerMin = this._consumptionPerTick * TICKS_PER_MINUTE;
-    // Equilibrium = 30s of demand = half a minute.
-    const equilibrium = this._consumptionPerTick * (TICKS_PER_MINUTE / 2);
+    // 0.5 energy/tick per structure × 600 ticks/min = 300/min per structure.
+    const demandPerMin = this._structureCount * 300;
+    // Equilibrium stock ≈ 30 s of demand (300 ticks × 0.5/tick per structure).
+    const equilibrium = this._structureCount * 150;
     const max = Math.max(demandPerMin, equilibrium, this._stock, 1);
     const stockPct = Math.min(100, (this._stock / max) * 100);
-    const eqPct = (equilibrium / max) * 100;
+    const eqPct = equilibrium > 0 ? Math.min(100, (equilibrium / max) * 100) : 50;
 
     const stockColor =
       this._stock >= equilibrium
@@ -187,7 +190,7 @@ export class EnergyDisplay extends LitElement implements Controller {
             <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
             <span class="text-gray-400">${translateText("energy_display.consumption_label")}</span>
             <span class="text-red-300 font-bold ml-auto">
-              ${renderNumber(demandPerMin)}/min
+              ${this._structureCount > 0 ? renderNumber(demandPerMin) + "/min" : "—"}
             </span>
           </div>
           <div class="flex-1 flex items-center gap-1">

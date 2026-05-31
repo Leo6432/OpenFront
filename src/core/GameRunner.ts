@@ -195,6 +195,7 @@ export class GameRunner {
       energyMarket: {
         price: Number(this.game.energyMarketPrice()),
         stock: Number(this.game.energyStock()),
+        structureCount: Number(this.game.energyStructureCount()),
         consumptionPerTick: Number(this.game.energyConsumption()),
         soldLastTick: Number(this.game.energySoldLastTick()),
       },

@@ -44,7 +44,9 @@ export interface EnergyMarketView {
   price: number;
   /** Global energy stock (accumulated from all player sales). */
   stock: number;
-  /** Total energy consumed per tick by all cities and factories on the map. */
+  /** Number of structures (cities + factories) generating demand across the map. */
+  structureCount: number;
+  /** Total energy drained from the stock last tick (may alternate due to half-unit rounding). */
   consumptionPerTick: number;
   /** Total energy sold into the market last tick (supply pulse). */
   soldLastTick: number;
