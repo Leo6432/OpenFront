@@ -597,6 +597,31 @@ export const boatMenuElement: MenuElement = {
   },
 };
 
+export const aircraftCarrierMenuElement: MenuElement = {
+  id: "carrier",
+  name: translateText("unit_type.aircraft_carrier"),
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions.interaction?.canSendAircraftCarrier,
+  icon: boatIcon,
+  color: COLORS.boat,
+  tooltipItems: [
+    {
+      text: translateText("unit_type.aircraft_carrier"),
+      className: "",
+    },
+    {
+      text: "10 000 000 💰",
+      className: "cost",
+    },
+  ],
+  action: async (params: MenuElementParams) => {
+    if (params.selected) {
+      params.playerActionHandler.handleAircraftCarrier(params.selected);
+    }
+    params.closeMenu();
+  },
+};
+
 export const centerButtonElement: CenterButtonElement = {
   disabled: (params: MenuElementParams): boolean => {
     const tileOwner = params.game.owner(params.tile);
@@ -663,6 +688,11 @@ export const rootMenuElement: MenuElement = {
     const inExtensionWindow =
       params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
+    const canCarrier =
+      !isOwnTerritory &&
+      !isFriendlyTarget(params) &&
+      params.playerActions.interaction?.canSendAircraftCarrier;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
@@ -670,6 +700,7 @@ export const rootMenuElement: MenuElement = {
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,
+            canCarrier ? aircraftCarrierMenuElement : null,
             isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,

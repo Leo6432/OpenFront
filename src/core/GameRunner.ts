@@ -231,6 +231,15 @@ export class GameRunner {
 
     if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
+      const senderComps = this.game.sharedWaterComponents(player);
+      const targetComps = this.game.sharedWaterComponents(other);
+      const sharesWater =
+        senderComps != null &&
+        targetComps != null &&
+        senderComps.size > 0 &&
+        targetComps.size > 0 &&
+        [...senderComps].some((c) => targetComps.has(c));
+
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
         canSendEmoji: player.canSendEmoji(other),
@@ -240,6 +249,8 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        canSendAircraftCarrier:
+          sharesWater && player.canAttackPlayer(other, false),
         allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }

@@ -789,7 +789,8 @@
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
     "factory": "Factory",
-    "nuclear_power_plant": "Nuclear Power Plant"
+    "nuclear_power_plant": "Centrale Nucléaire",
+    "aircraft_carrier": "Porte-avions"
   },
   "user_setting": {
     "title": "Settings",

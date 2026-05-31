@@ -2,6 +2,7 @@ import { EventBus } from "../../../core/EventBus";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
+  SendAircraftCarrierIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -38,6 +39,12 @@ export class PlayerActionHandler {
         targetTile,
         this.uiState.attackRatio * player.troops(),
       ),
+    );
+  }
+
+  handleAircraftCarrier(targetPlayer: PlayerView) {
+    this.eventBus.emit(
+      new SendAircraftCarrierIntentEvent(targetPlayer.id()),
     );
   }
 

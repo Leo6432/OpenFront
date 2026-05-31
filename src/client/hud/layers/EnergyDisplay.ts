@@ -25,6 +25,7 @@ export class EnergyDisplay extends LitElement implements Controller {
   @state() private _expanded = false;
 
   private _priceIndex = BASE_PRICE;
+  private _tickCounter = 0;
   private _priceHistory: number[] = [];
 
   createRenderRoot() {
@@ -49,13 +50,21 @@ export class EnergyDisplay extends LitElement implements Controller {
     this._isVisible = true;
     this._energy = player.energy();
 
-    // Simulated energy market price — random walk with mean reversion
-    const drift = (BASE_PRICE - this._priceIndex) * 0.02;
-    this._priceIndex += drift + (Math.random() - 0.5) * 6;
-    this._priceIndex = Math.max(20, Math.min(300, this._priceIndex));
-    this._priceHistory.push(this._priceIndex);
-    if (this._priceHistory.length > HISTORY_LEN) {
-      this._priceHistory.shift();
+    // Simulated energy market price — update every 3 ticks for a slower chart
+    this._tickCounter++;
+    if (this._tickCounter % 3 === 0) {
+      const drift = (BASE_PRICE - this._priceIndex) * 0.008;
+      // 12% chance of a big swing; otherwise a small random step
+      const bigSwing = Math.random() < 0.12;
+      const noise = bigSwing
+        ? (Math.random() - 0.5) * 35
+        : (Math.random() - 0.5) * 2.5;
+      this._priceIndex += drift + noise;
+      this._priceIndex = Math.max(20, Math.min(400, this._priceIndex));
+      this._priceHistory.push(this._priceIndex);
+      if (this._priceHistory.length > HISTORY_LEN) {
+        this._priceHistory.shift();
+      }
     }
     this.requestUpdate();
   }
