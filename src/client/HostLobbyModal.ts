@@ -21,6 +21,9 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
+import type { FriendEntry } from "../core/ApiSchemas";
+import { fetchFriends } from "./FriendsApi";
+import { sendLobbyInvite } from "./InvitePolling";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import { CopyButton } from "./components/CopyButton";
@@ -87,6 +90,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private hostCheatStartingGold: boolean = false;
   @state() private hostCheatStartingGoldValue: number | undefined = undefined;
   @state() private lobbyCreatorClientID: string = "";
+  @state() private friends: FriendEntry[] = [];
+  @state() private invitedPublicIds = new Set<string>();
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -409,6 +414,8 @@ export class HostLobbyModal extends BaseModal {
             .nationCount=${this.nations}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-player-view>
+
+          ${this.renderFriendInvites()}
         </div>
 
         <!-- Player List / footer -->
@@ -472,7 +479,10 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       };
     }
-    this.loadNationCount();
+    void this.loadNationCount();
+    void fetchFriends(1, 50).then((result) => {
+      if (result) this.friends = result.results;
+    });
   }
 
   private leaveLobby() {
@@ -550,6 +560,8 @@ export class HostLobbyModal extends BaseModal {
     this.hostCheatStartingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
+    this.friends = [];
+    this.invitedPublicIds = new Set();
   }
 
   private async handleSelectRandomMap() {
@@ -1022,6 +1034,52 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+
+  private renderFriendInvites() {
+    if (this.friends.length === 0) return html``;
+    return html`
+      <div class="mt-6 bg-white/5 rounded-xl border border-white/10 p-4">
+        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <span class="text-blue-400">👥</span>
+          ${translateText("invite.invite_friends")}
+        </h3>
+        <div class="flex flex-col gap-2">
+          ${this.friends.map((f) => {
+            const invited = this.invitedPublicIds.has(f.publicId);
+            return html`
+              <div
+                class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 px-3 py-2"
+              >
+                <span class="flex-1 text-sm text-gray-300 font-mono truncate">
+                  ${f.publicId}
+                </span>
+                <button
+                  ?disabled=${invited || !this.lobbyId}
+                  @click=${() => void this.inviteFriend(f.publicId)}
+                  class="${invited
+                    ? "bg-gray-700 opacity-60 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-500 cursor-pointer"} text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors disabled:pointer-events-none"
+                >
+                  ${invited
+                    ? translateText("invite.invited")
+                    : translateText("invite.invite")}
+                </button>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  private async inviteFriend(toPublicId: string): Promise<void> {
+    if (!this.lobbyId) return;
+    const gameUrl = await this.buildLobbyUrl();
+    const ok = await sendLobbyInvite(toPublicId, this.lobbyId, gameUrl);
+    if (ok) {
+      this.invitedPublicIds = new Set([...this.invitedPublicIds, toPublicId]);
+    }
   }
 
   private async loadNationCount() {

@@ -1,6 +1,6 @@
 import cluster from "cluster";
 import crypto from "crypto";
-import express from "express";
+import express, { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
@@ -14,9 +14,12 @@ import { renderAppShell } from "./RenderHtml";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
+import { InviteService } from "./InviteService";
+import { getUserMe, verifyClientToken } from "./jwt";
 
 const playlist = new MapPlaylist();
 let lobbyService: MasterLobbyService;
+const inviteService = new InviteService();
 
 const app = express();
 const server = http.createServer(app);
@@ -68,6 +71,60 @@ app.use(
 app.use("/api", (_req, res, next) => {
   setNoStoreHeaders(res);
   next();
+});
+
+async function resolvePublicId(
+  req: Request,
+): Promise<{ publicId: string; username: string } | null> {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  const verification = await verifyClientToken(token);
+  if (verification.type === "error") return null;
+
+  if (verification.claims !== null) {
+    const result = await getUserMe(token);
+    if (result.type === "error") return null;
+    return {
+      publicId: result.response.player.publicId,
+      username: (req.body as Record<string, unknown>)?.fromUsername as string || result.response.player.publicId,
+    };
+  }
+  // Dev mode: persistentId doubles as publicId
+  return {
+    publicId: verification.persistentId,
+    username: (req.body as Record<string, unknown>)?.fromUsername as string || verification.persistentId,
+  };
+}
+
+app.post("/api/invite", async (req: Request, res: Response) => {
+  const sender = await resolvePublicId(req);
+  if (!sender) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { toPublicId, gameId, gameUrl, fromUsername } = req.body as Record<string, string>;
+  if (!toPublicId || !gameId || !gameUrl) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+  inviteService.add(toPublicId, {
+    fromPublicId: sender.publicId,
+    fromUsername: fromUsername || sender.username,
+    gameId,
+    gameUrl,
+    createdAt: Date.now(),
+  });
+  res.json({ ok: true });
+});
+
+app.get("/api/invites", async (req: Request, res: Response) => {
+  const caller = await resolvePublicId(req);
+  if (!caller) {
+    res.json({ invites: [] });
+    return;
+  }
+  res.json({ invites: inviteService.drain(caller.publicId) });
 });
 
 // Start the master process

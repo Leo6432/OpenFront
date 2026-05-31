@@ -1385,6 +1385,14 @@
     "enter": "Enter fullscreen",
     "exit": "Exit fullscreen"
   },
+  "invite": {
+    "invite_friends": "Invite Friends",
+    "invite": "Invite",
+    "invited": "Invited ✓",
+    "notification_title": "{username} is inviting you to their lobby",
+    "join": "Join",
+    "decline": "Decline"
+  },
   "energy_display": {
     "sell": "Sell",
     "no_data": "No data yet",

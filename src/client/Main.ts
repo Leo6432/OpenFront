@@ -36,6 +36,8 @@ import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { InvitePolling } from "./InvitePolling";
+import "./components/LobbyInviteNotification";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -243,6 +245,8 @@ export interface JoinLobbyEvent {
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
 }
+
+const invitePolling = new InvitePolling();
 
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
@@ -500,6 +504,7 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
+        invitePolling.start();
       }
     };
 
