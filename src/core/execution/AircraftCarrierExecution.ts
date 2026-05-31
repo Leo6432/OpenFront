@@ -7,9 +7,9 @@ import { ShellExecution } from "./ShellExecution";
 const CARRIER_COST = 10_000_000n;
 // 20 seconds of bombardment at 10 ticks/s
 const ATTACK_DURATION = 200;
-// Fire a shell every 4 ticks (~2.5/s)
-const FIRE_RATE = 4;
-const ATTACK_RANGE = 18;
+// Fire a shell every 2 ticks (5/s) — visible rain of missiles
+const FIRE_RATE = 2;
+const ATTACK_RANGE = 25;
 
 export class AircraftCarrierExecution implements Execution {
   private active = true;
@@ -93,25 +93,30 @@ export class AircraftCarrierExecution implements Execution {
 
     switch (this.phase) {
       case "navigate": {
-        const dist = this.mg.manhattanDist(
-          this.carrier.tile(),
-          this.dstWaterTile,
-        );
-        if (dist <= 4) {
-          this.phase = "attack";
-          return;
-        }
-        const result = this.pathfinder.next(
-          this.carrier.tile(),
-          this.dstWaterTile,
-        );
-        if (result.status === PathStatus.COMPLETE) {
-          this.phase = "attack";
-        } else if (result.status === PathStatus.NEXT) {
-          this.carrier.move(result.node);
-        } else {
-          this.carrier.delete();
-          this.active = false;
+        // Move 2 steps per tick so the carrier visibly crosses the ocean
+        for (let step = 0; step < 2; step++) {
+          const dist = this.mg.manhattanDist(
+            this.carrier.tile(),
+            this.dstWaterTile,
+          );
+          if (dist <= 4) {
+            this.phase = "attack";
+            break;
+          }
+          const result = this.pathfinder.next(
+            this.carrier.tile(),
+            this.dstWaterTile,
+          );
+          if (result.status === PathStatus.COMPLETE) {
+            this.phase = "attack";
+            break;
+          } else if (result.status === PathStatus.NEXT) {
+            this.carrier.move(result.node);
+          } else {
+            this.carrier.delete();
+            this.active = false;
+            break;
+          }
         }
         break;
       }
@@ -140,27 +145,31 @@ export class AircraftCarrierExecution implements Execution {
       }
 
       case "retreat": {
-        const dist = this.mg.manhattanDist(
-          this.carrier.tile(),
-          this.homeTile,
-        );
-        if (dist <= 2) {
-          this.carrier.delete();
-          this.active = false;
-          return;
-        }
-        const result = this.pathfinder.next(
-          this.carrier.tile(),
-          this.homeTile,
-        );
-        if (result.status === PathStatus.COMPLETE) {
-          this.carrier.delete();
-          this.active = false;
-        } else if (result.status === PathStatus.NEXT) {
-          this.carrier.move(result.node);
-        } else {
-          this.carrier.delete();
-          this.active = false;
+        for (let step = 0; step < 2; step++) {
+          const dist = this.mg.manhattanDist(
+            this.carrier.tile(),
+            this.homeTile,
+          );
+          if (dist <= 2) {
+            this.carrier.delete();
+            this.active = false;
+            return;
+          }
+          const result = this.pathfinder.next(
+            this.carrier.tile(),
+            this.homeTile,
+          );
+          if (result.status === PathStatus.COMPLETE) {
+            this.carrier.delete();
+            this.active = false;
+            return;
+          } else if (result.status === PathStatus.NEXT) {
+            this.carrier.move(result.node);
+          } else {
+            this.carrier.delete();
+            this.active = false;
+            return;
+          }
         }
         break;
       }
@@ -172,7 +181,7 @@ export class AircraftCarrierExecution implements Execution {
     let best: Unit | null = null;
     let bestDist = Infinity;
     for (const unit of this.targetPlayer.units()) {
-      if (!unit.isActive() || !unit.hasHealth()) continue;
+      if (!unit.isActive()) continue;
       const d = this.mg.manhattanDist(tile, unit.tile());
       if (d <= ATTACK_RANGE && d < bestDist) {
         best = unit;
