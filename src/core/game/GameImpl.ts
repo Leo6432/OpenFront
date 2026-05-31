@@ -74,27 +74,51 @@ export function createGame(
 
 export type CellString = string;
 
-// Energy market tuning. All integer (bigint) math to stay deterministic.
+// ─── Energy market ────────────────────────────────────────────────────────────
+// All arithmetic uses bigint so the simulation stays deterministic.
+//
+// How the market works:
+//   • Nuclear plants produce personal energy for their owner.
+//   • Players can sell their personal energy into the global market stock.
+//   • Cities and factories consume from the global stock each tick (demand).
+//   • The market price is derived purely from the stock level relative to
+//     the "equilibrium stock" (= demand_per_tick × EQUILIBRIUM_TICKS).
+//     High stock → low price.  Low / empty stock → high price.
+//
+// Display note: consumption is per tick but the UI shows it per minute
+// (multiply by TICKS_PER_MINUTE = 600 at 10 ticks/s).
+
+const TICKS_PER_MINUTE = 600n;
+
+// How much energy each structure type drains from the global stock per tick.
+const ENERGY_CONSUMPTION_PER_CITY = 10n;    // 6 000 / min
+const ENERGY_CONSUMPTION_PER_FACTORY = 20n; // 12 000 / min
+
+// Nuclear plant production — each plant fills the owner's personal energy.
+// Value kept in NuclearPowerPlantExecution; referenced here for documentation.
+
+// Price bounds (gold per unit of energy).
+const ENERGY_MIN_PRICE = 10n;
 const ENERGY_BASE_PRICE = 100n;
-const ENERGY_MIN_PRICE = 20n;
-const ENERGY_MAX_PRICE = 1000n;
-// Energy demand per consuming structure, per tick.
-const ENERGY_CONSUMPTION_PER_CITY = 1n;
-const ENERGY_CONSUMPTION_PER_FACTORY = 2n;
-// How strongly the price reverts toward the base each tick (divisor).
-const ENERGY_PRICE_DRIFT_DIVISOR = 40n;
+const ENERGY_MAX_PRICE = 500n;
+
+// The stock level that corresponds to the base price.
+// = demand_per_tick × EQUILIBRIUM_TICKS (30 s = 300 ticks at 10 ticks/s).
+const EQUILIBRIUM_TICKS = 300n;
 
 export class GameImpl implements Game {
   private _ticks = 0;
   private startTick: number | null = null;
 
-  // Global energy market state. The price is shared across the whole map:
-  // selling energy increases supply (price falls) while cities and factories
-  // consume energy (demand) which pushes the price up.
+  // ── Global energy market ──────────────────────────────────────────────────
+  // The stock is the accumulated energy sold by players minus what cities and
+  // factories have consumed. It persists across ticks so a large sell-off
+  // keeps prices low until demand has drained the surplus.
+  private _energyStock = 0n;
   private _energyPrice = ENERGY_BASE_PRICE;
-  private _energySoldThisTick = 0n;
-  private _energySoldLastTick = 0n;
-  private _energyConsumption = 0n;
+  private _energyConsumptionPerTick = 0n; // updated each tick
+  private _energySoldThisTick = 0n;       // accumulator, reset each market update
+  private _energySoldLastTick = 0n;       // snapshot for display
 
   private unInitExecs: Execution[] = [];
 
@@ -494,14 +518,25 @@ export class GameImpl implements Game {
   }
 
   /**
-   * Recomputes the global energy market price from supply and demand.
+   * Updates the global energy market.
    *
-   * Demand is the total energy consumed by every city and factory on the map.
-   * Supply is the amount of energy players sold into the market this tick.
-   * When supply exceeds demand the price falls; when demand exceeds supply it
-   * rises. A gentle drift pulls the price back toward the base over time.
+   * The price is derived from how much energy is currently in the global stock
+   * relative to the "equilibrium stock" (≈ 30 s of current demand).  A big
+   * sell-off fills the stock and keeps prices low for many ticks; continuous
+   * demand (cities, factories) drains the stock and drives prices back up.
+   *
+   * Price formula (piecewise linear, fully integer):
+   *   stock = 0             → ENERGY_MAX_PRICE
+   *   stock = equilibrium   → ENERGY_BASE_PRICE
+   *   stock ≥ 2×equilibrium → ENERGY_MIN_PRICE
    */
   private updateEnergyMarket(): void {
+    // Capture how much was sold this tick (accumulated by registerEnergySold
+    // during the execution phase), then reset the accumulator for the next tick.
+    this._energySoldLastTick = this._energySoldThisTick;
+    this._energySoldThisTick = 0n;
+
+    // 1. Sum demand across all living players.
     let consumption = 0n;
     for (const player of this._players.values()) {
       if (!player.isAlive()) continue;
@@ -510,29 +545,51 @@ export class GameImpl implements Game {
         BigInt(player.unitCount(UnitType.Factory)) *
           ENERGY_CONSUMPTION_PER_FACTORY;
     }
-    this._energyConsumption = consumption;
+    this._energyConsumptionPerTick = consumption;
 
-    const sold = this._energySoldThisTick;
-    this._energySoldLastTick = sold;
+    // 2. Drain the global stock by demand; stock cannot go negative.
+    if (this._energyStock <= consumption) {
+      this._energyStock = 0n;
+    } else {
+      this._energyStock -= consumption;
+    }
 
-    const drift =
-      (ENERGY_BASE_PRICE - this._energyPrice) / ENERGY_PRICE_DRIFT_DIVISOR;
-    // Net supply: positive pushes the price down, negative pushes it up.
-    const net = sold - consumption;
-    let price = this._energyPrice + drift - net;
-    if (price < ENERGY_MIN_PRICE) price = ENERGY_MIN_PRICE;
-    if (price > ENERGY_MAX_PRICE) price = ENERGY_MAX_PRICE;
+    // 3. Compute equilibrium stock = demand × EQUILIBRIUM_TICKS.
+    const equilibrium =
+      consumption > 0n ? consumption * EQUILIBRIUM_TICKS : 1n;
+
+    // 4. Derive price from stock / equilibrium (piecewise linear).
+    let price: bigint;
+    if (this._energyStock === 0n) {
+      price = ENERGY_MAX_PRICE;
+    } else if (this._energyStock >= equilibrium * 2n) {
+      price = ENERGY_MIN_PRICE;
+    } else if (this._energyStock <= equilibrium) {
+      // Linear interpolation: 0 → MAX, equilibrium → BASE
+      price =
+        ENERGY_MAX_PRICE -
+        ((ENERGY_MAX_PRICE - ENERGY_BASE_PRICE) * this._energyStock) /
+          equilibrium;
+    } else {
+      // Linear interpolation: equilibrium → BASE, 2×equilibrium → MIN
+      const excess = this._energyStock - equilibrium;
+      price =
+        ENERGY_BASE_PRICE -
+        ((ENERGY_BASE_PRICE - ENERGY_MIN_PRICE) * excess) / equilibrium;
+    }
     this._energyPrice = price;
-
-    this._energySoldThisTick = 0n;
   }
 
   energyMarketPrice(): bigint {
     return this._energyPrice;
   }
 
+  energyStock(): bigint {
+    return this._energyStock;
+  }
+
   energyConsumption(): bigint {
-    return this._energyConsumption;
+    return this._energyConsumptionPerTick;
   }
 
   energySoldLastTick(): bigint {
@@ -541,6 +598,7 @@ export class GameImpl implements Game {
 
   registerEnergySold(amount: bigint): void {
     if (amount > 0n) {
+      this._energyStock += amount;
       this._energySoldThisTick += amount;
     }
   }

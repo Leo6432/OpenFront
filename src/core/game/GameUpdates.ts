@@ -40,12 +40,14 @@ export interface GameUpdateViewData {
 }
 
 export interface EnergyMarketView {
-  // Current global price, gold per unit of energy.
+  /** Current global price in gold per unit of energy. */
   price: number;
-  // Total energy consumed by all cities and factories this tick (demand).
-  consumption: number;
-  // Total energy sold into the market last tick (supply).
-  sold: number;
+  /** Global energy stock (accumulated from all player sales). */
+  stock: number;
+  /** Total energy consumed per tick by all cities and factories on the map. */
+  consumptionPerTick: number;
+  /** Total energy sold into the market last tick (supply pulse). */
+  soldLastTick: number;
 }
 
 export interface ErrorUpdate {

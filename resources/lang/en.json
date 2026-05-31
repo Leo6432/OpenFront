@@ -1386,14 +1386,13 @@
     "exit": "Exit fullscreen"
   },
   "energy_display": {
-    "energy": "Energy",
     "sell": "Sell",
     "no_data": "No data yet",
     "market_title": "Energy Market",
     "price_index": "Price Index",
-    "sell_label": "Total sale value",
-    "consumption_label": "Consumption (demand)",
-    "sold_label": "Sold (supply)",
-    "supply_demand": "Supply / Demand"
+    "sell_label": "Sell all energy",
+    "stock_label": "Market stock",
+    "consumption_label": "Demand",
+    "sold_label": "Sold last tick"
   }
 }

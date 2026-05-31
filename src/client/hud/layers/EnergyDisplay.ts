@@ -11,7 +11,7 @@ import { renderNumber, translateText } from "../../Utils";
 const nuclearIcon = assetUrl("images/NuclearPowerPlantIconWhite.svg");
 
 const HISTORY_LEN = 120;
-const BASE_PRICE = 100;
+const TICKS_PER_MINUTE = 600;
 
 @customElement("energy-display")
 export class EnergyDisplay extends LitElement implements Controller {
@@ -23,10 +23,11 @@ export class EnergyDisplay extends LitElement implements Controller {
   @state() private _isVisible = false;
   @state() private _expanded = false;
 
-  // Live values pulled from the deterministic global energy market.
-  @state() private _price = BASE_PRICE;
-  @state() private _consumption = 0;
-  @state() private _sold = 0;
+  // Live values from the deterministic global energy market.
+  @state() private _price = 100;
+  @state() private _stock = 0;
+  @state() private _consumptionPerTick = 0;
+  @state() private _soldLastTick = 0;
 
   private _tickCounter = 0;
   private _priceHistory: number[] = [];
@@ -53,15 +54,15 @@ export class EnergyDisplay extends LitElement implements Controller {
     this._isVisible = true;
     this._energy = player.energy();
 
-    // Read the real, shared market state from the simulation.
     const market = this.game.energyMarket();
     if (market) {
       this._price = market.price;
-      this._consumption = market.consumption;
-      this._sold = market.sold;
+      this._stock = market.stock;
+      this._consumptionPerTick = market.consumptionPerTick;
+      this._soldLastTick = market.soldLastTick;
     }
 
-    // Sample the price into the chart history every 3 ticks for a smoother line.
+    // Sample the price into the chart every 3 ticks for a smoother line.
     this._tickCounter++;
     if (this._tickCounter % 3 === 0) {
       this._priceHistory.push(this._price);
@@ -106,16 +107,17 @@ export class EnergyDisplay extends LitElement implements Controller {
       })
       .join(" ");
 
-    const first = this._priceHistory[0];
     const last = this._priceHistory[this._priceHistory.length - 1];
-    const up = last >= first;
+    const x1 =
+      pad +
+      ((this._priceHistory.length - 1) / (HISTORY_LEN - 1)) * (w - pad * 2);
+    const y1 = pad + (1 - (last - min) / range) * (h - pad * 2);
+    const x0 = pad;
+    const first = this._priceHistory[0];
+    const prev = this._priceHistory[this._priceHistory.length - 2] ?? last;
+    const up = last >= prev;
     const color = up ? "#34d399" : "#f87171";
 
-    // Fill polygon: line + right bottom corner + left bottom corner
-    const lastPt = this._priceHistory[this._priceHistory.length - 1];
-    const x0 = pad;
-    const x1 = pad + ((this._priceHistory.length - 1) / (HISTORY_LEN - 1)) * (w - pad * 2);
-    const y1 = pad + (1 - (lastPt - min) / range) * (h - pad * 2);
     const fillPts = `${pts} ${x1.toFixed(1)},${(h - pad).toFixed(1)} ${x0.toFixed(1)},${(h - pad).toFixed(1)}`;
 
     return svg`
@@ -127,61 +129,74 @@ export class EnergyDisplay extends LitElement implements Controller {
           </linearGradient>
         </defs>
         <polyline points="${fillPts}" fill="url(#eg${up ? "u" : "d"})" stroke="none"/>
-        <polyline
-          points="${pts}"
-          fill="none"
-          stroke="${color}"
-          stroke-width="2"
-          stroke-linejoin="round"
-          stroke-linecap="round"
-        />
-        <!-- Current price dot -->
+        <polyline points="${pts}" fill="none" stroke="${color}"
+          stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         <circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3" fill="${color}"/>
+        <!-- Min/max reference lines -->
+        <line x1="${pad}" y1="${(h - pad).toFixed(1)}"
+              x2="${(w - pad).toFixed(1)}" y2="${(h - pad).toFixed(1)}"
+              stroke="#374151" stroke-width="1"/>
+        <!-- current price label -->
+        <text x="${(w - pad - 2).toFixed(1)}" y="${(y1 - 6).toFixed(1)}"
+          text-anchor="end" fill="${color}" font-size="11" font-weight="bold">
+          ${this._price.toFixed(0)}
+        </text>
       </svg>
     `;
   }
 
-  private renderSupplyDemandBar() {
-    const consumption = this._consumption;
-    const sold = this._sold;
-    const max = Math.max(consumption, sold, 1);
-    const demandPct = (consumption / max) * 100;
-    const supplyPct = (sold / max) * 100;
+  /** Bar showing global stock vs 1 minute of demand. */
+  private renderStockBar() {
+    const demandPerMin = this._consumptionPerTick * TICKS_PER_MINUTE;
+    // Equilibrium = 30s of demand = half a minute.
+    const equilibrium = this._consumptionPerTick * (TICKS_PER_MINUTE / 2);
+    const max = Math.max(demandPerMin, equilibrium, this._stock, 1);
+    const stockPct = Math.min(100, (this._stock / max) * 100);
+    const eqPct = (equilibrium / max) * 100;
+
+    const stockColor =
+      this._stock >= equilibrium
+        ? "#34d399"
+        : this._stock > 0
+          ? "#f59e0b"
+          : "#f87171";
 
     return html`
       <div class="bg-gray-900 rounded-xl px-3 py-2 flex flex-col gap-2">
-        <div class="text-gray-400 text-xs">
-          ${translateText("energy_display.supply_demand")}
+        <!-- Stock bar -->
+        <div class="flex items-center justify-between text-xs text-gray-400 mb-0.5">
+          <span>${translateText("energy_display.stock_label")}</span>
+          <span class="font-bold" style="color:${stockColor}">
+            ${renderNumber(this._stock)}
+          </span>
         </div>
-        <!-- Demand (consumption) -->
-        <div class="flex items-center gap-2">
-          <span class="text-gray-400 text-xs w-40 shrink-0"
-            >${translateText("energy_display.consumption_label")}</span
-          >
-          <div class="flex-1 h-3 bg-gray-800 rounded overflow-hidden">
-            <div
-              class="h-full bg-red-500"
-              style="width: ${demandPct.toFixed(1)}%"
-            ></div>
-          </div>
-          <span class="text-red-300 text-xs font-bold w-16 text-right"
-            >${renderNumber(consumption)}</span
-          >
+        <div class="relative h-4 bg-gray-800 rounded overflow-hidden">
+          <div
+            class="h-full rounded transition-all"
+            style="width:${stockPct.toFixed(1)}%;background:${stockColor}"
+          ></div>
+          <!-- Equilibrium marker -->
+          <div
+            class="absolute top-0 bottom-0 w-0.5 bg-white/30"
+            style="left:${eqPct.toFixed(1)}%"
+          ></div>
         </div>
-        <!-- Supply (sold) -->
-        <div class="flex items-center gap-2">
-          <span class="text-gray-400 text-xs w-40 shrink-0"
-            >${translateText("energy_display.sold_label")}</span
-          >
-          <div class="flex-1 h-3 bg-gray-800 rounded overflow-hidden">
-            <div
-              class="h-full bg-green-500"
-              style="width: ${supplyPct.toFixed(1)}%"
-            ></div>
+        <!-- Consumption and sold row -->
+        <div class="flex gap-3 text-xs">
+          <div class="flex-1 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+            <span class="text-gray-400">${translateText("energy_display.consumption_label")}</span>
+            <span class="text-red-300 font-bold ml-auto">
+              ${renderNumber(demandPerMin)}/min
+            </span>
           </div>
-          <span class="text-green-300 text-xs font-bold w-16 text-right"
-            >${renderNumber(sold)}</span
-          >
+          <div class="flex-1 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
+            <span class="text-gray-400">${translateText("energy_display.sold_label")}</span>
+            <span class="text-green-300 font-bold ml-auto">
+              ${renderNumber(this._soldLastTick)}
+            </span>
+          </div>
         </div>
       </div>
     `;
@@ -191,13 +206,11 @@ export class EnergyDisplay extends LitElement implements Controller {
     if (!this._isVisible) return html``;
 
     if (this._expanded) {
-      const price = BigInt(Math.round(this._price));
-      const goldOnSell = this._energy * price;
+      const goldOnSell = this._energy * BigInt(Math.round(this._price));
       const canSell = this._energy > 0n;
-      const last = this._price;
-      const prev = this._priceHistory[this._priceHistory.length - 2] ?? last;
-      const pct = prev !== 0 ? ((last - prev) / prev) * 100 : 0;
-      const up = last >= prev;
+      const prev = this._priceHistory[this._priceHistory.length - 2] ?? this._price;
+      const pct = prev !== 0 ? ((this._price - prev) / prev) * 100 : 0;
+      const up = this._price >= prev;
 
       return html`
         <div
@@ -220,9 +233,9 @@ export class EnergyDisplay extends LitElement implements Controller {
             <!-- Title row -->
             <div class="flex items-center gap-2">
               <img src=${nuclearIcon} class="size-6 opacity-80" />
-              <span class="text-white font-bold text-base flex-1"
-                >${translateText("energy_display.market_title")}</span
-              >
+              <span class="text-white font-bold text-base flex-1">
+                ${translateText("energy_display.market_title")}
+              </span>
               <button
                 class="text-gray-500 hover:text-gray-200 text-xl leading-none cursor-pointer px-1"
                 @click=${() => this.toggle()}
@@ -233,50 +246,35 @@ export class EnergyDisplay extends LitElement implements Controller {
 
             <!-- Price + delta -->
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-bold text-white"
-                >${last.toFixed(1)}</span
+              <span class="text-3xl font-bold text-white">
+                ${this._price.toFixed(0)}
+              </span>
+              <span
+                class="${up ? "text-green-400" : "text-red-400"} text-sm font-semibold"
               >
-              <span class="${up ? "text-green-400" : "text-red-400"} text-sm font-semibold"
-                >${up ? "▲" : "▼"} ${Math.abs(pct).toFixed(2)}%</span
-              >
-              <span class="text-gray-500 text-xs ml-auto"
-                >${translateText("energy_display.price_index")}</span
-              >
+                ${up ? "▲" : "▼"} ${Math.abs(pct).toFixed(2)}%
+              </span>
+              <span class="text-gray-500 text-xs ml-auto">
+                ${translateText("energy_display.price_index")}
+              </span>
             </div>
 
-            <!-- Full-width chart -->
+            <!-- Full-width price chart -->
             <div class="rounded-xl overflow-hidden bg-gray-900 px-1 py-1">
-              ${this.renderPriceChart(520, 160)}
+              ${this.renderPriceChart(520, 140)}
             </div>
 
-            <!-- Energy stock row -->
-            <div class="flex items-center gap-2 text-sm">
-              <span class="text-gray-400"
-                >${translateText("energy_display.energy")}:</span
-              >
-              <span class="text-green-400 font-bold"
-                >${renderNumber(Number(this._energy))}</span
-              >
-              ${this._plantCount > 0
-                ? html`<span class="text-gray-500 text-xs"
-                    >(+${this._plantCount}/tick)</span
-                  >`
-                : html``}
-              <span class="text-gray-600 text-xs ml-auto"
-                >× ${last.toFixed(0)} 💰/unit</span
-              >
-            </div>
+            <!-- Stock + demand bar -->
+            ${this.renderStockBar()}
 
-            <!-- Supply / demand bar -->
-            ${this.renderSupplyDemandBar()}
-
-            <!-- Sell row -->
-            <div
-              class="flex items-center gap-3 bg-gray-900 rounded-xl px-3 py-2"
-            >
+            <!-- Personal energy + sell row -->
+            <div class="flex items-center gap-3 bg-gray-900 rounded-xl px-3 py-2">
               <div class="flex-1">
                 <div class="text-gray-400 text-xs mb-0.5">
                   ${translateText("energy_display.sell_label")}
+                  <span class="text-gray-600 ml-1">
+                    (${renderNumber(Number(this._energy))} × ${this._price.toFixed(0)} 💰)
+                  </span>
                 </div>
                 <div class="text-yellow-300 font-bold text-lg">
                   ${renderNumber(Number(goldOnSell))} 💰
@@ -297,16 +295,26 @@ export class EnergyDisplay extends LitElement implements Controller {
       `;
     }
 
-    // Compact view — nuclear icon + energy count only
+    // Compact pill — shows current price and personal energy stock.
+    const priceColor =
+      this._price <= 30
+        ? "text-red-400"
+        : this._price >= 200
+          ? "text-green-400"
+          : "text-yellow-300";
     return html`
       <button
         class="bg-gray-800/90 backdrop-blur-sm rounded-tl-lg lg:rounded-lg shadow-md px-2 py-1 pointer-events-auto flex items-center gap-1.5 cursor-pointer hover:bg-gray-700/90 transition-colors"
         @click=${() => this.toggle()}
       >
         <img src=${nuclearIcon} class="size-4 opacity-80" />
-        <span class="text-green-400 font-bold text-sm"
-          >${renderNumber(Number(this._energy))}</span
-        >
+        <span class="text-green-400 font-bold text-sm">
+          ${renderNumber(Number(this._energy))}
+        </span>
+        <span class="text-gray-500 text-xs">|</span>
+        <span class="${priceColor} font-bold text-sm">
+          ${this._price.toFixed(0)}💰
+        </span>
       </button>
     `;
   }

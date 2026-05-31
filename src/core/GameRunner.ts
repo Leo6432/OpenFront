@@ -194,8 +194,9 @@ export class GameRunner {
       pendingTurns: pendingTurns ?? 0,
       energyMarket: {
         price: Number(this.game.energyMarketPrice()),
-        consumption: Number(this.game.energyConsumption()),
-        sold: Number(this.game.energySoldLastTick()),
+        stock: Number(this.game.energyStock()),
+        consumptionPerTick: Number(this.game.energyConsumption()),
+        soldLastTick: Number(this.game.energySoldLastTick()),
       },
     });
     this.isExecuting = false;

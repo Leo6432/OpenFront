@@ -1,6 +1,8 @@
 import { Execution, Game, Unit } from "../game/Game";
 
-const ENERGY_PER_TICK = 1n;
+// Each nuclear power plant produces 1 000 energy/tick = 600 000/min.
+// With city consumption at 10/tick (6 000/min), one plant balances ~100 cities.
+const ENERGY_PER_TICK = 1_000n;
 
 export class NuclearPowerPlantExecution implements Execution {
   private active = true;
