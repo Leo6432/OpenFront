@@ -917,6 +917,8 @@ export interface Game extends GameMap {
   energyMarketPrice(): bigint;
   energyStock(): bigint;
   energyStructureCount(): bigint;
+  energyCityCount(): bigint;
+  energyFactoryCount(): bigint;
   energyConsumption(): bigint;
   energySoldLastTick(): bigint;
   registerEnergySold(amount: bigint): void;

@@ -115,6 +115,8 @@ export class GameImpl implements Game {
   // Half-unit accumulator for 0.5/tick demand (bigint-safe fractional drain).
   private _demandAccumulator = 0n;
   private _energyStructureCount = 0n;     // cities + factories, for display
+  private _energyCityCount = 0n;
+  private _energyFactoryCount = 0n;
   private _energyConsumptionPerTick = 0n; // real units drained last tick (display)
   private _energySoldThisTick = 0n;       // accumulator, reset each market update
   private _energySoldLastTick = 0n;       // snapshot for display
@@ -535,12 +537,16 @@ export class GameImpl implements Game {
     this._energySoldThisTick = 0n;
 
     // 1. Count structures (cities + factories) that create demand.
-    let structureCount = 0n;
+    let cityCount = 0n;
+    let factoryCount = 0n;
     for (const player of this._players.values()) {
       if (!player.isAlive()) continue;
-      structureCount +=
-        BigInt(player.unitCount(UnitType.City) + player.unitCount(UnitType.Factory));
+      cityCount += BigInt(player.unitCount(UnitType.City));
+      factoryCount += BigInt(player.unitCount(UnitType.Factory));
     }
+    this._energyCityCount = cityCount;
+    this._energyFactoryCount = factoryCount;
+    const structureCount = cityCount + factoryCount;
     this._energyStructureCount = structureCount;
 
     // 2. Drain stock at 0.1 energy/tick per structure via the tenth-unit
@@ -607,6 +613,14 @@ export class GameImpl implements Game {
 
   energyStructureCount(): bigint {
     return this._energyStructureCount;
+  }
+
+  energyCityCount(): bigint {
+    return this._energyCityCount;
+  }
+
+  energyFactoryCount(): bigint {
+    return this._energyFactoryCount;
   }
 
   energyConsumption(): bigint {

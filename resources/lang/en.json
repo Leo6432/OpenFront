@@ -1393,6 +1393,8 @@
     "sell_label": "Sell all energy",
     "stock_label": "Market stock",
     "consumption_label": "Demand",
-    "sold_label": "Sold last tick"
+    "sold_label": "Sold last tick",
+    "cities_label": "Cities",
+    "factories_label": "Factories"
   }
 }

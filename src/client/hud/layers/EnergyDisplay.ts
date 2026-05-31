@@ -27,6 +27,8 @@ export class EnergyDisplay extends LitElement implements Controller {
   @state() private _price = 1;
   @state() private _stock = 0;
   @state() private _structureCount = 0;
+  @state() private _cityCount = 0;
+  @state() private _factoryCount = 0;
   @state() private _consumptionPerTick = 0;
   @state() private _soldLastTick = 0;
 
@@ -60,6 +62,8 @@ export class EnergyDisplay extends LitElement implements Controller {
       this._price = market.price;
       this._stock = market.stock;
       this._structureCount = market.structureCount;
+      this._cityCount = market.cityCount;
+      this._factoryCount = market.factoryCount;
       this._consumptionPerTick = market.consumptionPerTick;
       this._soldLastTick = market.soldLastTick;
     }
@@ -199,6 +203,17 @@ export class EnergyDisplay extends LitElement implements Controller {
             <span class="text-green-300 font-bold ml-auto">
               ${renderNumber(this._soldLastTick)}
             </span>
+          </div>
+        </div>
+        <!-- City and factory counts -->
+        <div class="flex gap-3 text-xs border-t border-gray-700 pt-2">
+          <div class="flex-1 flex items-center gap-1">
+            <span class="text-gray-400">${translateText("energy_display.cities_label")}</span>
+            <span class="text-blue-300 font-bold ml-auto">${this._cityCount}</span>
+          </div>
+          <div class="flex-1 flex items-center gap-1">
+            <span class="text-gray-400">${translateText("energy_display.factories_label")}</span>
+            <span class="text-purple-300 font-bold ml-auto">${this._factoryCount}</span>
           </div>
         </div>
       </div>
