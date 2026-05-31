@@ -556,8 +556,13 @@ export class GameImpl implements Game {
     }
 
     // 3. Compute equilibrium stock = demand × EQUILIBRIUM_TICKS.
-    const equilibrium =
-      consumption > 0n ? consumption * EQUILIBRIUM_TICKS : 1n;
+    //    When there is no consumption (no cities/factories on the map) the
+    //    market is neutral: price stays at the base regardless of stock.
+    if (consumption === 0n) {
+      this._energyPrice = ENERGY_BASE_PRICE;
+      return;
+    }
+    const equilibrium = consumption * EQUILIBRIUM_TICKS;
 
     // 4. Derive price from stock / equilibrium (piecewise linear).
     let price: bigint;

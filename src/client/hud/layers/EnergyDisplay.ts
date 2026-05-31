@@ -295,13 +295,7 @@ export class EnergyDisplay extends LitElement implements Controller {
       `;
     }
 
-    // Compact pill — shows current price and personal energy stock.
-    const priceColor =
-      this._price <= 30
-        ? "text-red-400"
-        : this._price >= 200
-          ? "text-green-400"
-          : "text-yellow-300";
+    // Compact pill — just the personal energy amount.
     return html`
       <button
         class="bg-gray-800/90 backdrop-blur-sm rounded-tl-lg lg:rounded-lg shadow-md px-2 py-1 pointer-events-auto flex items-center gap-1.5 cursor-pointer hover:bg-gray-700/90 transition-colors"
@@ -310,10 +304,6 @@ export class EnergyDisplay extends LitElement implements Controller {
         <img src=${nuclearIcon} class="size-4 opacity-80" />
         <span class="text-green-400 font-bold text-sm">
           ${renderNumber(Number(this._energy))}
-        </span>
-        <span class="text-gray-500 text-xs">|</span>
-        <span class="${priceColor} font-bold text-sm">
-          ${this._price.toFixed(0)}💰
         </span>
       </button>
     `;

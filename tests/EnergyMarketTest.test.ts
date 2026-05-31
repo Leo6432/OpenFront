@@ -56,12 +56,15 @@ describe("Energy market", () => {
       }
     }
 
+    // A city creates continuous demand so the price responds to stock changes.
+    player.buildUnit(UnitType.City, game.ref(3, 3), {});
+
     player.addEnergy(1000n);
     const goldBefore = player.gold();
 
     game.addExecution(new SellEnergyExecution(player));
-    // Tick 1: init. Tick 2: SellEnergyExecution.tick() runs (captures current
-    // price), then updateEnergyMarket() raises the stock and recomputes price.
+    // Tick 1: init. Tick 2: SellEnergyExecution.tick() sells at current price,
+    // then updateEnergyMarket() fills the stock and recomputes price downward.
     game.executeNextTick();
     const priceBeforeSale = game.energyMarketPrice();
     game.executeNextTick();
@@ -69,7 +72,7 @@ describe("Energy market", () => {
     // Player was paid gold; energy is gone.
     expect(player.energy()).toBe(0n);
     expect(player.gold()).toBeGreaterThan(goldBefore);
-    // With 1000 energy injected into an empty stock, stock > 0 → price fell.
+    // Selling 1000 units fills the stock above equilibrium → price falls.
     expect(game.energyMarketPrice()).toBeLessThan(priceBeforeSale);
     expect(game.energySoldLastTick()).toBe(1000n);
   });
