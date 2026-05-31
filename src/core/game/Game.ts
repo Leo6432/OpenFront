@@ -1037,7 +1037,7 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
-  canSendAircraftCarrier: boolean;
+  canSendFighterJet: boolean;
   allianceInfo?: AllianceInfo;
 }
 

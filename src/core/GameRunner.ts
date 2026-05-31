@@ -231,13 +231,13 @@ export class GameRunner {
 
     if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
-      // Carrier needs sender to have a port AND target to have any coastline.
-      // Actual water-path connectivity is validated in AircraftCarrierExecution.
-      const senderHasPort = player
-        .units(UnitType.Port)
+      // Fighter jet launches from a missile silo and flies across the map,
+      // firing missiles. Requires the sender to own an active missile silo
+      // and be allowed to attack the target. Gold is validated in the
+      // FighterJetExecution.
+      const senderHasSilo = player
+        .units(UnitType.MissileSilo)
         .some((u) => u.isActive() && !u.isUnderConstruction());
-      const targetComps = this.game.sharedWaterComponents(other);
-      const targetHasCoast = targetComps != null && targetComps.size > 0;
 
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
@@ -248,10 +248,8 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
-        canSendAircraftCarrier:
-          senderHasPort &&
-          targetHasCoast &&
-          player.canAttackPlayer(other, false),
+        canSendFighterJet:
+          senderHasSilo && player.canAttackPlayer(other, false),
         allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }

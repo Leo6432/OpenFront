@@ -2,7 +2,6 @@ import { EventBus } from "../../../core/EventBus";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
-  SendAircraftCarrierIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -13,6 +12,7 @@ import {
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendFighterJetIntentEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
@@ -42,10 +42,8 @@ export class PlayerActionHandler {
     );
   }
 
-  handleAircraftCarrier(targetPlayer: PlayerView) {
-    this.eventBus.emit(
-      new SendAircraftCarrierIntentEvent(targetPlayer.id()),
-    );
+  handleFighterJet(targetPlayer: PlayerView) {
+    this.eventBus.emit(new SendFighterJetIntentEvent(targetPlayer.id()));
   }
 
   async findBestTransportShipSpawn(

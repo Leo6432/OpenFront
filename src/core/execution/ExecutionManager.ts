@@ -25,7 +25,7 @@ import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
-import { AircraftCarrierExecution } from "./AircraftCarrierExecution";
+import { FighterJetExecution } from "./FighterJetExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -125,8 +125,8 @@ export class Executor {
         return new PauseExecution(player, intent.paused);
       case "sell_energy":
         return new SellEnergyExecution(player);
-      case "send_aircraft_carrier":
-        return new AircraftCarrierExecution(player, intent.targetID);
+      case "send_fighter_jet":
+        return new FighterJetExecution(player, intent.targetID);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

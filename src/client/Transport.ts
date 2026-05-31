@@ -178,7 +178,7 @@ export class SendStartGameEvent implements GameEvent {}
 
 export class SellEnergyIntentEvent implements GameEvent {}
 
-export class SendAircraftCarrierIntentEvent implements GameEvent {
+export class SendFighterJetIntentEvent implements GameEvent {
   constructor(public readonly targetID: string) {}
 }
 
@@ -274,8 +274,8 @@ export class Transport {
 
     this.eventBus.on(SendStartGameEvent, () => this.onSendStartGame());
     this.eventBus.on(SellEnergyIntentEvent, () => this.onSellEnergyIntent());
-    this.eventBus.on(SendAircraftCarrierIntentEvent, (e) =>
-      this.sendIntent({ type: "send_aircraft_carrier", targetID: e.targetID }),
+    this.eventBus.on(SendFighterJetIntentEvent, (e) =>
+      this.sendIntent({ type: "send_fighter_jet", targetID: e.targetID }),
     );
   }
 

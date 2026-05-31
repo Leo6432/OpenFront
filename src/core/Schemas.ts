@@ -53,7 +53,7 @@ export type Intent =
   | UpdateGameConfigIntent
   | StartGameIntent
   | SellEnergyIntent
-  | SendAircraftCarrierIntent;
+  | SendFighterJetIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -89,8 +89,8 @@ export type UpdateGameConfigIntent = z.infer<
 >;
 export type StartGameIntent = z.infer<typeof StartGameIntentSchema>;
 export type SellEnergyIntent = z.infer<typeof SellEnergyIntentSchema>;
-export type SendAircraftCarrierIntent = z.infer<
-  typeof SendAircraftCarrierIntentSchema
+export type SendFighterJetIntent = z.infer<
+  typeof SendFighterJetIntentSchema
 >;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -473,8 +473,8 @@ export const SellEnergyIntentSchema = z.object({
   type: z.literal("sell_energy"),
 });
 
-export const SendAircraftCarrierIntentSchema = z.object({
-  type: z.literal("send_aircraft_carrier"),
+export const SendFighterJetIntentSchema = z.object({
+  type: z.literal("send_fighter_jet"),
   targetID: ID,
 });
 
@@ -505,7 +505,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
   StartGameIntentSchema,
   SellEnergyIntentSchema,
-  SendAircraftCarrierIntentSchema,
+  SendFighterJetIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
