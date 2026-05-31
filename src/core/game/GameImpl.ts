@@ -74,9 +74,27 @@ export function createGame(
 
 export type CellString = string;
 
+// Energy market tuning. All integer (bigint) math to stay deterministic.
+const ENERGY_BASE_PRICE = 100n;
+const ENERGY_MIN_PRICE = 20n;
+const ENERGY_MAX_PRICE = 1000n;
+// Energy demand per consuming structure, per tick.
+const ENERGY_CONSUMPTION_PER_CITY = 1n;
+const ENERGY_CONSUMPTION_PER_FACTORY = 2n;
+// How strongly the price reverts toward the base each tick (divisor).
+const ENERGY_PRICE_DRIFT_DIVISOR = 40n;
+
 export class GameImpl implements Game {
   private _ticks = 0;
   private startTick: number | null = null;
+
+  // Global energy market state. The price is shared across the whole map:
+  // selling energy increases supply (price falls) while cities and factories
+  // consume energy (demand) which pushes the price up.
+  private _energyPrice = ENERGY_BASE_PRICE;
+  private _energySoldThisTick = 0n;
+  private _energySoldLastTick = 0n;
+  private _energyConsumption = 0n;
 
   private unInitExecs: Execution[] = [];
 
@@ -465,6 +483,7 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+    this.updateEnergyMarket();
     // Flush pending water conversions + throttled graph rebuild
     const waterChangedTiles = this._waterManager.tick(this._ticks);
     for (const tile of waterChangedTiles) {
@@ -472,6 +491,58 @@ export class GameImpl implements Game {
     }
     this._ticks++;
     return this.updates;
+  }
+
+  /**
+   * Recomputes the global energy market price from supply and demand.
+   *
+   * Demand is the total energy consumed by every city and factory on the map.
+   * Supply is the amount of energy players sold into the market this tick.
+   * When supply exceeds demand the price falls; when demand exceeds supply it
+   * rises. A gentle drift pulls the price back toward the base over time.
+   */
+  private updateEnergyMarket(): void {
+    let consumption = 0n;
+    for (const player of this._players.values()) {
+      if (!player.isAlive()) continue;
+      consumption +=
+        BigInt(player.unitCount(UnitType.City)) * ENERGY_CONSUMPTION_PER_CITY +
+        BigInt(player.unitCount(UnitType.Factory)) *
+          ENERGY_CONSUMPTION_PER_FACTORY;
+    }
+    this._energyConsumption = consumption;
+
+    const sold = this._energySoldThisTick;
+    this._energySoldLastTick = sold;
+
+    const drift =
+      (ENERGY_BASE_PRICE - this._energyPrice) / ENERGY_PRICE_DRIFT_DIVISOR;
+    // Net supply: positive pushes the price down, negative pushes it up.
+    const net = sold - consumption;
+    let price = this._energyPrice + drift - net;
+    if (price < ENERGY_MIN_PRICE) price = ENERGY_MIN_PRICE;
+    if (price > ENERGY_MAX_PRICE) price = ENERGY_MAX_PRICE;
+    this._energyPrice = price;
+
+    this._energySoldThisTick = 0n;
+  }
+
+  energyMarketPrice(): bigint {
+    return this._energyPrice;
+  }
+
+  energyConsumption(): bigint {
+    return this._energyConsumption;
+  }
+
+  energySoldLastTick(): bigint {
+    return this._energySoldLastTick;
+  }
+
+  registerEnergySold(amount: bigint): void {
+    if (amount > 0n) {
+      this._energySoldThisTick += amount;
+    }
   }
 
   private recordTileUpdate(tile: TileRef): void {

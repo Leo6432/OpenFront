@@ -913,6 +913,12 @@ export interface Game extends GameMap {
   isPaused(): boolean;
   setPaused(paused: boolean): void;
 
+  // Global energy market (shared across the whole map)
+  energyMarketPrice(): bigint;
+  energyConsumption(): bigint;
+  energySoldLastTick(): bigint;
+  registerEnergySold(amount: bigint): void;
+
   // Units
   unit(id: number): Unit | undefined;
   units(...types: UnitType[]): Unit[];
@@ -1037,7 +1043,6 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
-  canSendFighterJet: boolean;
   allianceInfo?: AllianceInfo;
 }
 

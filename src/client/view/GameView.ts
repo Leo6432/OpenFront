@@ -12,6 +12,7 @@ import {
 } from "../../core/game/Game";
 import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
+  EnergyMarketView,
   GameUpdateType,
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
@@ -907,6 +908,9 @@ export class GameView implements GameMap {
   ticks(): Tick {
     if (this.lastUpdate === null) return 0;
     return this.lastUpdate.tick;
+  }
+  energyMarket(): EnergyMarketView | null {
+    return this.lastUpdate?.energyMarket ?? null;
   }
   inSpawnPhase(): boolean {
     return this.startTick === null;

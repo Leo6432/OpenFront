@@ -36,6 +36,16 @@ export interface GameUpdateViewData {
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
   pendingTurns?: number;
+  energyMarket?: EnergyMarketView;
+}
+
+export interface EnergyMarketView {
+  // Current global price, gold per unit of energy.
+  price: number;
+  // Total energy consumed by all cities and factories this tick (demand).
+  consumption: number;
+  // Total energy sold into the market last tick (supply).
+  sold: number;
 }
 
 export interface ErrorUpdate {

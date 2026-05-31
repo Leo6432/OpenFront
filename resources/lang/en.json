@@ -789,8 +789,7 @@
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
     "factory": "Factory",
-    "nuclear_power_plant": "Centrale Nucléaire",
-    "fighter_jet": "Avion de chasse"
+    "nuclear_power_plant": "Centrale Nucléaire"
   },
   "user_setting": {
     "title": "Settings",
@@ -1283,8 +1282,7 @@
   },
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
-    "delete_unit_description": "Click to delete the nearest unit",
-    "fighter_jet_cost": "10 000 000 💰"
+    "delete_unit_description": "Click to delete the nearest unit"
   },
   "discord_user_header": {
     "avatar_alt": "Avatar"
@@ -1393,6 +1391,9 @@
     "no_data": "No data yet",
     "market_title": "Energy Market",
     "price_index": "Price Index",
-    "sell_label": "Total sale value"
+    "sell_label": "Total sale value",
+    "consumption_label": "Consumption (demand)",
+    "sold_label": "Sold (supply)",
+    "supply_demand": "Supply / Demand"
   }
 }

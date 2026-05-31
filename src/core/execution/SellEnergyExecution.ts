@@ -1,13 +1,14 @@
 import { Execution, Game, Player } from "../game/Game";
 
-const GOLD_PER_ENERGY = 100n;
-
 export class SellEnergyExecution implements Execution {
   private active = true;
+  private mg!: Game;
 
   constructor(private player: Player) {}
 
-  init(_mg: Game, _ticks: number): void {}
+  init(mg: Game, _ticks: number): void {
+    this.mg = mg;
+  }
 
   tick(_ticks: number): void {
     if (!this.player.isAlive()) {
@@ -16,8 +17,12 @@ export class SellEnergyExecution implements Execution {
     }
     const energy = this.player.energy();
     if (energy > 0n) {
+      // Sell at the current global market price. The sale adds supply to the
+      // market, which pushes the price down on the next market update.
+      const price = this.mg.energyMarketPrice();
       this.player.removeEnergy(energy);
-      this.player.addGold(energy * GOLD_PER_ENERGY);
+      this.player.addGold(energy * price);
+      this.mg.registerEnergySold(energy);
     }
     this.active = false;
   }

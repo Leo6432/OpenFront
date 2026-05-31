@@ -12,7 +12,6 @@ import {
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
-  SendFighterJetIntentEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
@@ -40,10 +39,6 @@ export class PlayerActionHandler {
         this.uiState.attackRatio * player.troops(),
       ),
     );
-  }
-
-  handleFighterJet(targetPlayer: PlayerView) {
-    this.eventBus.emit(new SendFighterJetIntentEvent(targetPlayer.id()));
   }
 
   async findBestTransportShipSpawn(

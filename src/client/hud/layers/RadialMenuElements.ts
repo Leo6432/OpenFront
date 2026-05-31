@@ -22,7 +22,6 @@ import { TooltipItem } from "./RadialMenu";
 
 import { EventBus } from "../../../core/EventBus";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
-const fighterJetIcon = assetUrl("images/MIRVIcon.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
@@ -598,31 +597,6 @@ export const boatMenuElement: MenuElement = {
   },
 };
 
-export const fighterJetMenuElement: MenuElement = {
-  id: "fighter_jet",
-  name: "Avion de chasse",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions.interaction?.canSendFighterJet,
-  icon: fighterJetIcon,
-  color: COLORS.boat,
-  tooltipKeys: [
-    {
-      key: "unit_type.fighter_jet",
-      className: "title",
-    },
-    {
-      key: "radial_menu.fighter_jet_cost",
-      className: "cost",
-    },
-  ],
-  action: async (params: MenuElementParams) => {
-    if (params.selected) {
-      params.playerActionHandler.handleFighterJet(params.selected);
-    }
-    params.closeMenu();
-  },
-};
-
 export const centerButtonElement: CenterButtonElement = {
   disabled: (params: MenuElementParams): boolean => {
     const tileOwner = params.game.owner(params.tile);
@@ -689,11 +663,6 @@ export const rootMenuElement: MenuElement = {
     const inExtensionWindow =
       params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
-    const canFighterJet =
-      !isOwnTerritory &&
-      !isFriendlyTarget(params) &&
-      params.playerActions.interaction?.canSendFighterJet;
-
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
@@ -701,7 +670,6 @@ export const rootMenuElement: MenuElement = {
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,
-            canFighterJet ? fighterJetMenuElement : null,
             isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,

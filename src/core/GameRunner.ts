@@ -192,6 +192,11 @@ export class GameRunner {
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
+      energyMarket: {
+        price: Number(this.game.energyMarketPrice()),
+        consumption: Number(this.game.energyConsumption()),
+        sold: Number(this.game.energySoldLastTick()),
+      },
     });
     this.isExecuting = false;
     return true;
@@ -231,14 +236,6 @@ export class GameRunner {
 
     if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
-      // Fighter jet launches from a missile silo and flies across the map,
-      // firing missiles. Requires the sender to own an active missile silo
-      // and be allowed to attack the target. Gold is validated in the
-      // FighterJetExecution.
-      const senderHasSilo = player
-        .units(UnitType.MissileSilo)
-        .some((u) => u.isActive() && !u.isUnderConstruction());
-
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
         canSendEmoji: player.canSendEmoji(other),
@@ -248,8 +245,6 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
-        canSendFighterJet:
-          senderHasSilo && player.canAttackPlayer(other, false),
         allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }
