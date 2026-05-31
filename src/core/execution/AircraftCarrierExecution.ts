@@ -7,7 +7,7 @@ import { ShellExecution } from "./ShellExecution";
 const CARRIER_COST = 10_000_000n;
 // 20 seconds of bombardment at 10 ticks/s
 const ATTACK_DURATION = 200;
-// Fire a shell every 2 ticks (5/s) — visible rain of missiles
+// Fire a shell every 2 ticks (5/s)
 const FIRE_RATE = 2;
 const ATTACK_RANGE = 25;
 
@@ -17,8 +17,9 @@ export class AircraftCarrierExecution implements Execution {
   private phase: "navigate" | "attack" | "retreat" = "navigate";
   private attackTicks = 0;
   private lastShot = -999;
-  private homeTile!: TileRef;
-  // Water tile adjacent to enemy coast — warshipSpawn requires a water tile
+  // Water tile adjacent to sender's port — actual spawn location on water
+  private spawnWaterTile!: TileRef;
+  // Water tile adjacent to enemy coast — navigation destination
   private dstWaterTile!: TileRef;
   private mg!: Game;
   private pathfinder!: WaterPathFinder;
@@ -47,38 +48,60 @@ export class AircraftCarrierExecution implements Execution {
       return;
     }
 
-    // Find a water tile adjacent to the enemy's shore that is also reachable
-    // from the sender's port (same water component).  We iterate border tiles
-    // that are shore tiles and test each adjacent water tile with canBuild so
-    // we pick a water tile in the correct connected component.
-    const borderTiles = Array.from(this.targetPlayer.borderTiles());
-    if (borderTiles.length === 0) {
-      this.active = false;
-      return;
-    }
-
-    let found = false;
-    for (const bt of borderTiles) {
-      if (!mg.isShore(bt)) continue;
-      mg.forEachNeighbor(bt, (n) => {
-        if (found || !mg.isWater(n)) return;
-        const spawn = this.sender.canBuild(UnitType.Warship, n);
-        if (spawn !== false) {
-          this.dstWaterTile = n;
-          this.homeTile = spawn;
-          found = true;
+    // Find the sender's best active port and its adjacent water tile.
+    // We spawn the carrier on water (not on the port land tile) so the
+    // WaterPathFinder can navigate from the very first tick.
+    let portWaterTile: TileRef | null = null;
+    for (const port of this.sender.units(UnitType.Port)) {
+      if (!port.isActive() || port.isUnderConstruction()) continue;
+      mg.forEachNeighbor(port.tile(), (n) => {
+        if (portWaterTile === null && mg.isWater(n)) {
+          portWaterTile = n;
         }
       });
-      if (found) break;
+      if (portWaterTile !== null) break;
     }
-    if (!found) {
+    if (portWaterTile === null) {
       this.active = false;
       return;
     }
+    this.spawnWaterTile = portWaterTile;
 
-    this.sender.removeGold(CARRIER_COST);
+    // Find a water tile adjacent to the enemy's shore that is in the same
+    // water component as the sender's port (so the path exists).
+    const portComponent = mg.getWaterComponent(this.spawnWaterTile);
+    let dstWaterTile: TileRef | null = null;
 
-    this.carrier = this.sender.buildUnit(UnitType.Warship, this.homeTile, {
+    for (const bt of this.targetPlayer.borderTiles()) {
+      if (!mg.isShore(bt)) continue;
+      mg.forEachNeighbor(bt, (n) => {
+        if (dstWaterTile !== null || !mg.isWater(n)) return;
+        // Verify this water tile is reachable from sender's port
+        if (
+          portComponent !== null &&
+          mg.hasWaterComponent(n, portComponent)
+        ) {
+          dstWaterTile = n;
+        }
+      });
+      if (dstWaterTile !== null) break;
+    }
+    if (dstWaterTile === null) {
+      this.active = false;
+      return;
+    }
+    this.dstWaterTile = dstWaterTile;
+
+    // Deduct cost: buildUnit will deduct the warship's base cost internally,
+    // so we only pre-deduct the remainder to total exactly CARRIER_COST.
+    const warshipCost = mg.unitInfo(UnitType.Warship).cost(mg, this.sender);
+    const remainder =
+      CARRIER_COST > warshipCost ? CARRIER_COST - warshipCost : 0n;
+    this.sender.removeGold(remainder);
+
+    // Spawn the carrier on the water tile next to the port so it starts on
+    // water and the pathfinder works immediately.
+    this.carrier = this.sender.buildUnit(UnitType.Warship, this.spawnWaterTile, {
       patrolTile: this.dstWaterTile,
     });
 
@@ -93,8 +116,9 @@ export class AircraftCarrierExecution implements Execution {
 
     switch (this.phase) {
       case "navigate": {
-        // Move 2 steps per tick so the carrier visibly crosses the ocean
+        // Move 2 steps per tick so the carrier crosses the ocean visibly
         for (let step = 0; step < 2; step++) {
+          if (!this.active) break;
           const dist = this.mg.manhattanDist(
             this.carrier.tile(),
             this.dstWaterTile,
@@ -113,6 +137,8 @@ export class AircraftCarrierExecution implements Execution {
           } else if (result.status === PathStatus.NEXT) {
             this.carrier.move(result.node);
           } else {
+            // No water path found — delete carrier and refund gold
+            this.sender.addGold(CARRIER_COST);
             this.carrier.delete();
             this.active = false;
             break;
@@ -145,10 +171,12 @@ export class AircraftCarrierExecution implements Execution {
       }
 
       case "retreat": {
+        // Move 2 steps per tick back to spawn
         for (let step = 0; step < 2; step++) {
+          if (!this.active) break;
           const dist = this.mg.manhattanDist(
             this.carrier.tile(),
-            this.homeTile,
+            this.spawnWaterTile,
           );
           if (dist <= 2) {
             this.carrier.delete();
@@ -157,7 +185,7 @@ export class AircraftCarrierExecution implements Execution {
           }
           const result = this.pathfinder.next(
             this.carrier.tile(),
-            this.homeTile,
+            this.spawnWaterTile,
           );
           if (result.status === PathStatus.COMPLETE) {
             this.carrier.delete();
